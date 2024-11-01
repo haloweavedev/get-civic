@@ -1,10 +1,14 @@
-import { auth } from '@clerk/nextjs/server'
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
+import { Metadata } from 'next'
+import { siteConfig } from '@/config/metadata'
 
-export default async function Home() {
-  const { userId } = await auth();
+export const metadata: Metadata = {
+  title: "Home",
+  description: siteConfig.description,
+}
 
+export default function Home() {
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col items-center justify-center p-8">
       <div className="max-w-3xl text-center">
