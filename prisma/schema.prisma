@@ -8,11 +8,149 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Test models
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  role      UserRole @default(USER)
+  settings  Json?    @default("{}")
+  apiKey    String?  @unique // For API access
+  
+  // Usage and limits
+  apiUsage  Int      @default(0)
+  apiLimit  Int      @default(1000)
+  
+  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  communications Communication[]
+  organizations  OrganizationMember[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  VIEWER
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  settings    Json?    @default("{}")
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members     OrganizationMember[]
+  communications Communication[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole   @default(MEMBER)
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  
+  // Timestamps
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Communication {
+  id              String             @id @default(cuid())
+  type            CommunicationType
+  direction       Direction
+  status          ProcessingStatus   @default(PENDING)
+  rawContent      String             // Original content
+  processedContent String?           // Cleaned/normalized content
+  metadata        Json               // Source-specific metadata
+  
+  // Source identifiers
+  sourceId        String?            // External ID (e.g., Twilio SID)
+  source          String?            // Source system identifier
+  
+  // Participants
+  participants    String[]           // Array of participant identifiers
+  
+  // Error handling
+  errorDetails    String?
+  retryCount      Int               @default(0)
+  
+  // Relations
+  organizationId  String
+  organization    Organization      @relation(fields: [organizationId], references: [id])
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  analysis        Analysis?
+  
+  // Timestamps
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  processedAt     DateTime?
+
+  @@index([type, status])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+enum CommunicationType {
+  CALL
+  SMS
+  EMAIL
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model Analysis {
+  id              String    @id @default(cuid())
+  version         String    // Analysis version/model used
+  
+  // Analysis results
+  sentiment       Json      // Sentiment analysis results
+  summary         String    // Generated summary
+  categories      Json      // Detected categories
+  entities        Json      // Extracted entities
+  intentions      String[]  // Detected intentions
+  priority        Int       @default(0)
+  
+  // Processing metadata
+  language        String    // Detected language
+  confidence      Float     // Analysis confidence score
+  processingTime  Int       // Processing time in milliseconds
+  
+  // Relations
+  communicationId String    @unique
+  communication   Communication @relation(fields: [communicationId], references: [id])
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([communicationId])
 }
