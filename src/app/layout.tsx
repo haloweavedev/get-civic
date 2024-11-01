@@ -1,9 +1,62 @@
-import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from 'next/font/google'
-import Link from 'next/link'
+import { Metadata } from 'next'
+import { siteConfig } from '@/config/metadata'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: [
+    "Communication Analytics",
+    "AI Analytics",
+    "Business Intelligence",
+    "Customer Insights",
+    "Data Analytics",
+    "Communication Platform",
+  ],
+  authors: [
+    {
+      name: siteConfig.creator,
+      url: siteConfig.url,
+    },
+  ],
+  creator: siteConfig.creator,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteConfig.url,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+    creator: "@senateinsights",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+}
 
 export default function RootLayout({
   children,
@@ -13,36 +66,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={inter.className}>
-          <header className="border-b">
-            <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-              <Link href="/" className="text-xl font-bold">
-                Senate Insights
-              </Link>
-              <nav>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  <div className="flex items-center gap-4">
-                    <Link 
-                      href="/dashboard"
-                      className="hover:text-blue-500 transition-colors"
-                    >
-                      Dashboard
-                    </Link>
-                    <UserButton afterSignOutUrl="/" />
-                  </div>
-                </SignedIn>
-              </nav>
-            </div>
-          </header>
-          <main>{children}</main>
-        </body>
+        <body className={inter.className}>{children}</body>
       </html>
     </ClerkProvider>
   )

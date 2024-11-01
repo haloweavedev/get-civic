@@ -1,7 +1,10 @@
+import { auth } from '@clerk/nextjs/server'
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col items-center justify-center p-8">
       <div className="max-w-3xl text-center">
@@ -24,7 +27,7 @@ export default function Home() {
               href="/sign-in" 
               className="border border-gray-300 hover:border-gray-400 text-gray-700 font-bold py-3 px-6 rounded-lg"
             >
-              Learn More
+              Sign In
             </Link>
           </div>
         </SignedOut>
