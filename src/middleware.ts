@@ -8,7 +8,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks/(.*)',  // All webhook routes
   '/api/test-call',      // Test call endpoint
-  '/api/test-env'        // Environment test endpoint
+  '/api/test-env',       // Environment test endpoint
+  '/api/auth/callback',  // Gmail OAuth callback
+  '/api/auth/gmail'      // Gmail auth endpoint
 ])
 
 // Enable debug in development
