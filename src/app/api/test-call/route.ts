@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   try {
     const call = await twilioClient.calls.create({
       url: "http://demo.twilio.com/docs/voice.xml",
-      to: "+19298995822",
+      to: "+919886639809",
       from: "+14438430495"
     });
     

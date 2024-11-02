@@ -1,24 +1,13 @@
-// src/app/(auth)/dashboard/page.tsx
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from "next/navigation";
-import { Metadata } from 'next'
+// src/components/dashboard/dashboard-content.tsx
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Activity, Users, BarChart } from "lucide-react";
-import { IntegrationsStatus } from "@/components/dashboard/integrations/integrations-status";
-import { CommunicationsDashboard } from "@/components/dashboard/communications/communications-dashboard";
+import { IntegrationsStatus } from "./integrations/integrations-status";
+import CommunicationsDashboard from "./communications/communications-dashboard";
 
-export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Manage and analyze your communication data",
-}
-
-export default async function DashboardPage() {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
+// Named export for DashboardContent
+export function DashboardContent({ userId }: { userId: string }) {
   return (
     <div className="space-y-8">
       <div>
@@ -76,7 +65,38 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <CommunicationsDashboard />
+      {/* Dynamic Stats Section */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Communication Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] flex items-center justify-center border-2 border-dashed rounded-lg">
+              Chart placeholder
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] flex items-center justify-center border-2 border-dashed rounded-lg">
+              Activity feed placeholder
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Communications Dashboard */}
+      <div className="mt-8">
+        <CommunicationsDashboard />
+      </div>
     </div>
   );
 }
+
+// Default export for flexibility
+export default DashboardContent;

@@ -1,27 +1,31 @@
-import { gmail_v1 } from 'googleapis';
+import type { IntegrationTokens } from '../types';
 
-export interface GmailOAuthTokens {
-  access_token: string;
+export interface GmailTokens extends IntegrationTokens {
   refresh_token: string;
-  scope: string;
-  token_type: string;
   expiry_date: number;
+  scope: string;
 }
 
-export interface UserSettings {
-  gmailTokens?: GmailOAuthTokens;
-  [key: string]: any;
-}
-
-export interface ParsedEmail {
+export interface EmailMetadata {
+  id: string;
+  threadId: string;
   subject: string;
-  from: string;
-  to: string;
-  body: string;
+  from: { email: string; name?: string };
+  to: { email: string; name?: string };
   date: string;
+  snippet?: string;
+  labels: string[];
 }
 
-export type GmailMessage = gmail_v1.Schema$Message;
-export type GmailHistory = gmail_v1.Schema$History;
-export type GmailListMessagesResponse = gmail_v1.Schema$ListMessagesResponse;
-export type GmailHistoryResponse = gmail_v1.Schema$ListHistoryResponse;
+export interface EmailContent {
+  id: string;
+  threadId: string;
+  content: string;
+  snippet?: string;
+  attachments?: Array<{
+    id: string;
+    name: string;
+    mimeType: string;
+    size?: number;
+  }>;
+}
