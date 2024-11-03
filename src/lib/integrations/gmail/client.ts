@@ -1,32 +1,53 @@
+// src/lib/integrations/gmail/client.ts
 import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
-import { IntegrationError, handleIntegrationError } from '../utils';
+import { IntegrationError } from '../errors';
+import { logger, handleIntegrationError, parseEmailAddress } from '../utils';
+import { debugLog } from '@/lib/integrations/debug';
 import type { GmailTokens, EmailMetadata, EmailContent } from './types';
 
 const SCOPES = [
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/gmail.metadata'
-];
+    'https://www.googleapis.com/auth/gmail.readonly'
+  ];
 
-export class GmailClient {
+class GmailClient {
+  private static instance: GmailClient | null = null;
   private oauth2Client;
 
-  constructor() {
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GMAIL_CLIENT_ID,
-      process.env.GMAIL_CLIENT_SECRET,
-      `${process.env.NEXT_PUBLIC_URL}/api/integrations/gmail/callback`
-    );
+  private constructor() {
+    const clientId = process.env.GMAIL_CLIENT_ID;
+    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+    const redirectUri = `${process.env.NEXT_PUBLIC_URL}/api/integrations/gmail/callback`;
+
+    if (!clientId || !clientSecret) {
+      throw new IntegrationError(
+        'Missing Gmail credentials',
+        'GMAIL_CONFIG_ERROR',
+        500
+      );
+    }
+
+    this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
   }
 
-  public getAuthUrl(): string {
-    return this.oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: SCOPES,
-      prompt: 'consent',
-      include_granted_scopes: true
-    });
+  public static getInstance(): GmailClient {
+    if (!GmailClient.instance) {
+      GmailClient.instance = new GmailClient();
+    }
+    return GmailClient.instance;
   }
+
+public getAuthUrl(): string {
+    try {
+      return this.oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: SCOPES,
+        prompt: 'consent' // Removed include_granted_scopes
+      });
+    } catch (error) {
+      throw handleIntegrationError(error, 'Gmail', 'getAuthUrl');
+    }
+  }  
 
   public async getTokens(code: string): Promise<GmailTokens> {
     try {
@@ -40,72 +61,102 @@ export class GmailClient {
       }
       return tokens as GmailTokens;
     } catch (error) {
-      throw await handleIntegrationError(error);
+      throw handleIntegrationError(error, 'Gmail', 'getTokens');
     }
   }
 
   private async ensureValidToken(userId: string): Promise<void> {
     try {
-      const user = await prisma.user.findUnique({ 
-        where: { id: userId }
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      debugLog('ensureValidToken - User Data', { 
+        userId,
+        hasSettings: !!user?.settings,
+        settingsContent: user?.settings 
+      });
+  
+      if (!user?.settings) {
+        throw new IntegrationError('User not found or no settings', 'USER_NOT_FOUND', 404);
+      }
+  
+      const settings = user.settings as { gmailTokens?: string | GmailTokens };
+      // Parse tokens if they're a string
+      const tokens = typeof settings.gmailTokens === 'string' 
+        ? JSON.parse(settings.gmailTokens) 
+        : settings.gmailTokens;
+  
+      debugLog('ensureValidToken - Tokens', { 
+        hasTokens: !!tokens,
+        expiryDate: tokens?.expiry_date,
+        currentTime: Date.now(),
+        timeToExpiry: tokens?.expiry_date ? tokens.expiry_date - Date.now() : null,
+        parsedTokens: tokens  // Log the parsed tokens
       });
 
-      if (!user?.settings) {
+      // Set credentials with the parsed tokens
+      this.oauth2Client.setCredentials(tokens);
+  
+      if (!tokens.scope || !tokens.scope.includes('https://www.googleapis.com/auth/gmail.readonly')) {
         throw new IntegrationError(
-          'User not found or no settings',
-          'USER_NOT_FOUND',
-          404
+          'Access token does not have the required scopes. Please reconnect your Gmail account.',
+          'INSUFFICIENT_SCOPES',
+          403
         );
       }
-
-      const settings = user.settings as { gmailTokens?: GmailTokens };
-      const tokens = settings.gmailTokens;
-      
-      if (!tokens) {
-        throw new IntegrationError(
-          'Gmail not connected',
-          'GMAIL_NOT_CONNECTED',
-          401
-        );
-      }
-
-      // Refresh token if expired or about to expire (5 minutes buffer)
-      if (tokens.expiry_date < Date.now() + 5 * 60 * 1000) {
-        this.oauth2Client.setCredentials(tokens);
+  
+      // Check expiry and refresh if needed
+      if (tokens.expiry_date && tokens.expiry_date < Date.now() + 5 * 60 * 1000) {
+        debugLog('ensureValidToken - Refreshing Token', {
+          reason: 'Token expired or expiring soon'
+        });
+        
         const { credentials } = await this.oauth2Client.refreshAccessToken();
         
         await prisma.user.update({
           where: { id: userId },
-          data: {
-            settings: {
-              ...user.settings,
-              gmailTokens: credentials
-            }
+          data: { 
+            settings: { 
+              ...user.settings, 
+              gmailTokens: credentials  // Store as object
+            } 
           }
         });
-
+  
         this.oauth2Client.setCredentials(credentials);
-      } else {
-        this.oauth2Client.setCredentials(tokens);
+        
+        debugLog('ensureValidToken - Token Refreshed', {
+          newExpiryDate: credentials.expiry_date
+        });
       }
     } catch (error) {
-      throw await handleIntegrationError(error);
+      debugLog('ensureValidToken - Error', { error });
+      throw handleIntegrationError(error, 'Gmail', 'ensureValidToken');
+    }
+  }
+
+  public async testConnection(userId: string): Promise<{ connected: boolean; lastSync?: string }> {
+    try {
+      await this.ensureValidToken(userId);
+      return { connected: true, lastSync: new Date().toISOString() };
+    } catch (error) {
+      logger.error('Gmail connection test failed', error);
+      return { connected: false };
     }
   }
 
   public async listEmails(userId: string, maxResults: number = 10): Promise<EmailMetadata[]> {
     try {
       await this.ensureValidToken(userId);
-      
       const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+      
+      // First, list all messages
       const response = await gmail.users.messages.list({
         userId: 'me',
         maxResults,
-        q: 'to:haloweaveinsights@gmail.com'
+        // Remove the 'q' parameter from here and filter in memory
       });
-
+  
       if (!response.data.messages) return [];
-
+  
       const emails = await Promise.all(
         response.data.messages.map(async (msg) => {
           const details = await gmail.users.messages.get({
@@ -114,33 +165,38 @@ export class GmailClient {
             format: 'metadata',
             metadataHeaders: ['From', 'To', 'Subject', 'Date']
           });
-
+  
           const headers = details.data.payload?.headers || [];
+          const to = headers.find(h => h.name === 'To')?.value || '';
+          
+          // Filter here instead of in the API query
+          if (!to.includes('haloweaveinsights@gmail.com')) {
+            return null;
+          }
+  
           return {
             id: details.data.id!,
             threadId: details.data.threadId!,
             subject: headers.find(h => h.name === 'Subject')?.value || 'No Subject',
-            from: this.parseEmailAddress(headers.find(h => h.name === 'From')?.value || ''),
-            to: this.parseEmailAddress(headers.find(h => h.name === 'To')?.value || ''),
+            from: parseEmailAddress(headers.find(h => h.name === 'From')?.value || ''),
+            to: parseEmailAddress(to),
             date: headers.find(h => h.name === 'Date')?.value || new Date().toISOString(),
             snippet: details.data.snippet || '',
             labels: details.data.labelIds || []
           };
         })
       );
-
-      return emails;
+  
+      // Filter out null values and limit to maxResults
+      return emails.filter(Boolean).slice(0, maxResults);
     } catch (error) {
-      throw await handleIntegrationError(error);
+      throw handleIntegrationError(error, 'Gmail', 'listEmails');
     }
   }
-
-  private parseEmailAddress = parseEmailAddress;
 
   public async getEmailContent(userId: string, messageId: string): Promise<EmailContent> {
     try {
       await this.ensureValidToken(userId);
-      
       const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
       const message = await gmail.users.messages.get({
         userId: 'me',
@@ -152,23 +208,16 @@ export class GmailClient {
       const attachments: EmailContent['attachments'] = [];
 
       if (message.data.payload) {
-        // Extract text content
         const extractText = (part: any): string => {
           if (part.mimeType === 'text/plain' && part.body?.data) {
             return Buffer.from(part.body.data, 'base64').toString();
           }
-
           if (part.parts) {
-            return part.parts
-              .map((p: any) => extractText(p))
-              .filter(Boolean)
-              .join('\n');
+            return part.parts.map((p: any) => extractText(p)).filter(Boolean).join('\n');
           }
-
           return '';
         };
 
-        // Extract attachments info
         const processAttachments = (part: any) => {
           if (part.filename && part.body) {
             attachments.push({
@@ -178,7 +227,6 @@ export class GmailClient {
               size: part.body.size
             });
           }
-
           if (part.parts) {
             part.parts.forEach((p: any) => processAttachments(p));
           }
@@ -196,7 +244,10 @@ export class GmailClient {
         attachments
       };
     } catch (error) {
-      throw await handleIntegrationError(error);
+      throw handleIntegrationError(error, 'Gmail', 'getEmailContent');
     }
   }
 }
+
+// Export the singleton instance
+export const gmailClient = GmailClient.getInstance();

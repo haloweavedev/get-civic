@@ -29,3 +29,7 @@ export interface EmailContent {
     size?: number;
   }>;
 }
+
+export const validateGmailScope = (scope: string): boolean => {
+  return scope.includes('https://www.googleapis.com/auth/gmail.readonly');
+};

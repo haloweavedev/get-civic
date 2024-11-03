@@ -80,25 +80,25 @@ model Communication {
   rawContent      String             // Original content
   processedContent String?           // Cleaned/normalized content
   metadata        Json               // Source-specific metadata
-  
+
   // Source identifiers
   sourceId        String?            // External ID (e.g., Twilio SID)
   source          String?            // Source system identifier
-  
+
   // Participants
   participants    String[]           // Array of participant identifiers
-  
+
   // Error handling
   errorDetails    String?
   retryCount      Int               @default(0)
-  
-  // Relations
-  organizationId  String
-  organization    Organization      @relation(fields: [organizationId], references: [id])
+
+  // **Make organizationId optional**
+  organizationId  String?
+  organization    Organization?      @relation(fields: [organizationId], references: [id])
   userId          String
   user            User             @relation(fields: [userId], references: [id])
   analysis        Analysis?
-  
+
   // Timestamps
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt

@@ -1,10 +1,12 @@
-import { ClerkProvider } from '@clerk/nextjs'
-import { Inter } from 'next/font/google'
-import { Metadata } from 'next'
-import { siteConfig } from '@/config/metadata'
-import './globals.css'
+// src/app/layout.tsx
+import { ClerkProvider } from '@clerk/nextjs';
+import { Inter } from 'next/font/google';
+import { Metadata } from 'next';
+import { siteConfig } from '@/config/metadata';
+import { Toaster } from 'sonner';
+import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: {
@@ -13,12 +15,12 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   keywords: [
-    "Communication Analytics",
-    "AI Analytics",
-    "Business Intelligence",
-    "Customer Insights",
-    "Data Analytics",
-    "Communication Platform",
+    'Communication Analytics',
+    'AI Analytics',
+    'Business Intelligence',
+    'Customer Insights',
+    'Data Analytics',
+    'Communication Platform',
   ],
   authors: [
     {
@@ -28,8 +30,8 @@ export const metadata: Metadata = {
   ],
   creator: siteConfig.creator,
   openGraph: {
-    type: "website",
-    locale: "en_US",
+    type: 'website',
+    locale: 'en_US',
     url: siteConfig.url,
     title: siteConfig.name,
     description: siteConfig.description,
@@ -44,30 +46,33 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: 'summary_large_image',
     title: siteConfig.name,
     description: siteConfig.description,
     images: [siteConfig.ogImage],
-    creator: "@senateinsights",
+    creator: '@senateinsights',
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
   },
-  manifest: "/site.webmanifest",
-}
+  manifest: '/site.webmanifest',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={inter.className}>{children}</body>
+        <body className={inter.className}>
+          {children}
+          <Toaster />
+        </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }

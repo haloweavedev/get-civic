@@ -1,15 +1,8 @@
-import { IntegrationError } from './types';
-
-// Logging utility
-interface LogMetadata {
-  source?: string;
-  action?: string;
-  userId?: string;
-  details?: any;
-}
+// src/lib/integrations/utils.ts
+import { IntegrationError } from './errors';
 
 export const logger = {
-  info: (message: string, metadata?: LogMetadata) => {
+  info: (message: string, metadata?: any) => {
     console.log(JSON.stringify({
       level: 'info',
       timestamp: new Date().toISOString(),
@@ -18,7 +11,7 @@ export const logger = {
     }));
   },
   
-  error: (message: string, error: unknown, metadata?: LogMetadata) => {
+  error: (message: string, error: unknown, metadata?: any) => {
     console.error(JSON.stringify({
       level: 'error',
       timestamp: new Date().toISOString(),
@@ -38,97 +31,38 @@ export const logger = {
   }
 };
 
-// Error handling utility
-export async function handleIntegrationError(
+export function handleIntegrationError(
   error: unknown,
-  source: string,
-  action: string
-): Promise<IntegrationError> {
-  let integrationError: IntegrationError;
-
+  source?: string,
+  action?: string
+): IntegrationError {
   if (error instanceof IntegrationError) {
-    integrationError = error;
-  } else {
-    integrationError = new IntegrationError(
-      error instanceof Error ? error.message : 'Unknown integration error',
-      'INTEGRATION_ERROR',
-      500,
-      error
-    );
+    return error;
   }
 
+  const integrationError = new IntegrationError(
+    error instanceof Error ? error.message : 'Unknown integration error',
+    'INTEGRATION_ERROR',
+    500,
+    error
+  );
+
   logger.error(
-    `Integration error in ${source} during ${action}`,
-    error,
-    { source, action }
+    `Integration error ${source ? `in ${source}` : ''} ${action ? `during ${action}` : ''}`,
+    integrationError
   );
 
   return integrationError;
 }
 
-// Rate limiting utility
-export class RateLimiter {
-  private cache: Map<string, { count: number; timestamp: number }> = new Map();
-
-  constructor(
-    private readonly limit: number,
-    private readonly windowMs: number = 60000 // 1 minute default
-  ) {}
-
-  async isAllowed(key: string): Promise<boolean> {
-    const now = Date.now();
-    const record = this.cache.get(key);
-
-    if (!record) {
-      this.cache.set(key, { count: 1, timestamp: now });
-      return true;
-    }
-
-    if (now - record.timestamp > this.windowMs) {
-      this.cache.set(key, { count: 1, timestamp: now });
-      return true;
-    }
-
-    if (record.count >= this.limit) {
-      return false;
-    }
-
-    record.count++;
-    return true;
-  }
-}
-
-// Validation utilities
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-export function validatePhoneNumber(phone: string): boolean {
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-  return phoneRegex.test(phone);
-}
-
-// Retry utility with exponential backoff
-export async function withRetry<T>(
-  operation: () => Promise<T>,
-  retries: number = 3,
-  baseDelayMs: number = 1000
-): Promise<T> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (attempt === retries) throw error;
-      
-      const delay = baseDelayMs * Math.pow(2, attempt - 1);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      logger.info(`Retry attempt ${attempt} after ${delay}ms`, {
-        action: 'retry',
-        details: { attempt, maxRetries: retries, delay }
-      });
-    }
-  }
-  throw new Error('Retry failed');
+export function parseEmailAddress(email: string): {
+  email: string;
+  name?: string;
+} {
+  const match = email.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
+  if (!match) return { email };
+  return {
+    name: match[1],
+    email: match[2]
+  };
 }

@@ -1,7 +1,8 @@
+// src/app/api/test/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { gmailClient } from '@/lib/integrations/gmail/client';
-import { twilioClient } from '@/lib/integrations/twilio/client';
+import { logger } from '@/lib/integrations/utils';
 
 export async function GET() {
   try {
@@ -12,9 +13,12 @@ export async function GET() {
 
     // Test Gmail Connection
     const gmailStatus = await gmailClient.testConnection(userId);
-    
-    // Test Twilio Connection
-    const twilioStatus = await twilioClient.testConnection();
+
+    // For now, return static Twilio status until we implement it
+    const twilioStatus = {
+      connected: false,
+      message: 'Not implemented yet'
+    };
 
     return NextResponse.json({
       gmail: gmailStatus,
@@ -22,7 +26,7 @@ export async function GET() {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Test error:', error);
+    logger.error('Integration test failed', error);
     return NextResponse.json(
       { error: 'Test failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
