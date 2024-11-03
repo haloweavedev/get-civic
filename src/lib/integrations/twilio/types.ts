@@ -9,6 +9,7 @@ export interface TwilioCallWebhookPayload {
   RecordingUrl?: string;
   TranscriptionText?: string;
   Duration?: string;
+  [key: string]: any; // To capture additional properties
 }
 
 export interface TwilioSMSWebhookPayload {
@@ -18,6 +19,7 @@ export interface TwilioSMSWebhookPayload {
   Body: string;
   NumMedia: string;
   MediaUrl0?: string;
+  [key: string]: any; // To capture additional properties
 }
 
 export interface TwilioMetadata extends IntegrationMetadata {

@@ -1,34 +1,41 @@
 // src/lib/integrations/utils.ts
+
 import { IntegrationError } from './errors';
 
 export const logger = {
   info: (message: string, metadata?: any) => {
-    console.log(JSON.stringify({
-      level: 'info',
-      timestamp: new Date().toISOString(),
-      message,
-      ...metadata
-    }));
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        timestamp: new Date().toISOString(),
+        message,
+        ...metadata,
+      })
+    );
   },
-  
+
   error: (message: string, error: unknown, metadata?: any) => {
-    console.error(JSON.stringify({
-      level: 'error',
-      timestamp: new Date().toISOString(),
-      message,
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        ...(error instanceof IntegrationError && {
-          code: error.code,
-          status: error.status,
-          details: error.details,
-        }),
-      } : error,
-      ...metadata
-    }));
-  }
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        timestamp: new Date().toISOString(),
+        message,
+        error: error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+              ...(error instanceof IntegrationError && {
+                code: error.code,
+                status: error.status,
+                details: error.details,
+              }),
+            }
+          : error,
+        ...metadata,
+      })
+    );
+  },
 };
 
 export function handleIntegrationError(
@@ -48,7 +55,9 @@ export function handleIntegrationError(
   );
 
   logger.error(
-    `Integration error ${source ? `in ${source}` : ''} ${action ? `during ${action}` : ''}`,
+    `Integration error ${source ? `in ${source}` : ''} ${
+      action ? `during ${action}` : ''
+    }`,
     integrationError
   );
 
@@ -63,6 +72,6 @@ export function parseEmailAddress(email: string): {
   if (!match) return { email };
   return {
     name: match[1],
-    email: match[2]
+    email: match[2],
   };
 }

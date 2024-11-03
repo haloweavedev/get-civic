@@ -1,8 +1,10 @@
+// src/lib/integrations/twilio/handlers/processor.ts
+
 import { prisma } from '@/lib/prisma';
 import { validateRequest } from 'twilio';
 import type { TwilioCallWebhookPayload, TwilioSMSWebhookPayload, TwilioMetadata } from '../types';
 import { TwilioError } from '../types';
-import type { CommunicationProcessor } from '../../types';
+import type { CommunicationProcessor } from '@/lib/integrations/types';
 
 export class TwilioProcessor implements CommunicationProcessor {
   async validateWebhook(request: Request, url: string): Promise<boolean> {
@@ -12,10 +14,10 @@ export class TwilioProcessor implements CommunicationProcessor {
       const twilioSignature = request.headers.get('x-twilio-signature') || '';
 
       return validateRequest(
+        process.env.TWILIO_AUTH_TOKEN!,
         twilioSignature,
         url,
-        payload as Record<string, string>,
-        process.env.TWILIO_AUTH_TOKEN!
+        payload as Record<string, string>
       );
     } catch (error) {
       throw new TwilioError(
@@ -35,42 +37,38 @@ export class TwilioProcessor implements CommunicationProcessor {
       const isCall = 'CallSid' in payload;
       const metadata: TwilioMetadata = {
         source: 'TWILIO',
-        sourceId: isCall ? payload.CallSid : (payload as TwilioSMSWebhookPayload).MessageSid,
+        sourceId: isCall ? payload.CallSid : payload.MessageSid,
         direction: payload.Direction === 'inbound' ? 'INBOUND' : 'OUTBOUND',
         participants: [payload.From, payload.To],
         timestamp: new Date().toISOString(),
-        status: isCall ? (payload as TwilioCallWebhookPayload).CallStatus : 'received',
+        status: isCall ? payload.CallStatus : 'received',
         ...(isCall && {
-          duration: (payload as TwilioCallWebhookPayload).Duration,
-          mediaUrls: (payload as TwilioCallWebhookPayload).RecordingUrl ? 
-            [(payload as TwilioCallWebhookPayload).RecordingUrl] : 
-            undefined
+          duration: payload.Duration,
+          mediaUrls: payload.RecordingUrl ? [payload.RecordingUrl] : undefined,
         }),
         ...(!isCall && {
-          mediaUrls: (payload as TwilioSMSWebhookPayload).MediaUrl0 ? 
-            [(payload as TwilioSMSWebhookPayload).MediaUrl0] : 
-            undefined
+          mediaUrls: payload.NumMedia !== '0' ? [payload.MediaUrl0!] : undefined,
         }),
-        raw: payload
+        raw: payload,
       };
 
       const communication = await prisma.communication.create({
         data: {
           type: isCall ? 'CALL' : 'SMS',
           direction: metadata.direction,
-          rawContent: isCall ? 
-            (payload as TwilioCallWebhookPayload).RecordingUrl || '' : 
-            (payload as TwilioSMSWebhookPayload).Body,
-          processedContent: isCall ? 
-            (payload as TwilioCallWebhookPayload).TranscriptionText || '' : 
-            (payload as TwilioSMSWebhookPayload).Body,
+          rawContent: isCall
+            ? payload.RecordingUrl || ''
+            : payload.Body,
+          processedContent: isCall
+            ? payload.TranscriptionText || ''
+            : payload.Body,
           metadata,
           sourceId: metadata.sourceId,
           source: 'TWILIO',
           status: 'PENDING',
           participants: metadata.participants,
           organizationId: 'default-org',
-          userId
+          userId,
         },
       });
 

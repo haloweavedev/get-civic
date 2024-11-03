@@ -45,8 +45,8 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  members     OrganizationMember[]
-  communications Communication[]
+  members         OrganizationMember[]
+  communications  Communication[]
 }
 
 model OrganizationMember {
@@ -57,7 +57,7 @@ model OrganizationMember {
   
   // Relations
   organization   Organization @relation(fields: [organizationId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   
   // Timestamps
   createdAt     DateTime     @default(now())
@@ -73,36 +73,36 @@ enum MemberRole {
 }
 
 model Communication {
-  id              String             @id @default(cuid())
-  type            CommunicationType
-  direction       Direction
-  status          ProcessingStatus   @default(PENDING)
-  rawContent      String             // Original content
-  processedContent String?           // Cleaned/normalized content
-  metadata        Json               // Source-specific metadata
+  id               String             @id @default(cuid())
+  type             CommunicationType
+  direction        Direction
+  status           ProcessingStatus   @default(PENDING)
+  rawContent       String             // Original content
+  processedContent String?            // Cleaned/normalized content
+  metadata         Json               // Source-specific metadata
 
   // Source identifiers
-  sourceId        String?            // External ID (e.g., Twilio SID)
-  source          String?            // Source system identifier
+  sourceId         String?            // External ID (e.g., Twilio SID)
+  source           String?            // Source system identifier
 
   // Participants
-  participants    String[]           // Array of participant identifiers
+  participants     String[]           // Array of participant identifiers
 
   // Error handling
-  errorDetails    String?
-  retryCount      Int               @default(0)
+  errorDetails     String?
+  retryCount       Int                @default(0)
 
-  // **Make organizationId optional**
-  organizationId  String?
-  organization    Organization?      @relation(fields: [organizationId], references: [id])
-  userId          String
-  user            User             @relation(fields: [userId], references: [id])
-  analysis        Analysis?
+  // Relationships
+  organizationId   String?
+  organization     Organization?      @relation(fields: [organizationId], references: [id])
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  analysis         Analysis?
 
   // Timestamps
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  processedAt     DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  processedAt      DateTime?
 
   @@index([type, status])
   @@index([organizationId])
