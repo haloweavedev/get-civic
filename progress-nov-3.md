@@ -181,6 +181,7 @@ POST /api/webhooks/gmail
 3. Real-time notifications
 4. Mobile optimization
 5. Export capabilities
+6. Automated Personalised AI replies
 
 ## Known Issues & Solutions
 
