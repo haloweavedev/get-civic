@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Phone, MessageSquare } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { TestCallSection } from './test-call-section';
 
 export default async function TwilioSetupPage() {
   const { userId } = await auth();
@@ -42,6 +43,7 @@ export default async function TwilioSetupPage() {
       </div>
 
       <div className="grid gap-6">
+        {/* Configuration Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -50,7 +52,7 @@ export default async function TwilioSetupPage() {
                 <CardDescription>Current status of your Twilio integration</CardDescription>
               </div>
               {isConfigured ? (
-                <Badge variant="success" className="h-8">
+                <Badge variant="default" className="h-8">
                   <CheckCircle className="mr-1 h-4 w-4" />
                   Configured
                 </Badge>
@@ -107,6 +109,10 @@ export default async function TwilioSetupPage() {
           </CardContent>
         </Card>
 
+        {/* Add Test Call Section */}
+        <TestCallSection />
+
+        {/* Webhook Card */}
         <Card>
           <CardHeader>
             <CardTitle>Webhook Configuration</CardTitle>
