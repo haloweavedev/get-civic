@@ -18,8 +18,13 @@ export async function GET(request: Request) {
     // Build where clause
     const where = {
       userId,
-      ...(source && { source }),
-      ...(type && type !== 'all' && { type })
+      ...(type && type !== 'all' && { type }),
+      ...(source && {
+        metadata: {
+          path: ['source'],
+          equals: source
+        }
+      })
     };
 
     logger.info('Fetching communications', { where, limit });

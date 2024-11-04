@@ -15,7 +15,7 @@ export const envSchema = z.object({
   OPENAI_API_KEY: z.string().startsWith('sk-'),
   
   // Twilio
-  TWILIO_ACCOUNT_SID: z.string().startsWith('AC'),
+  TWILIO_ACCOUNT_SID: z.string().startsWith('SK'),
   TWILIO_AUTH_TOKEN: z.string(),
   TWILIO_PHONE_NUMBER: z.string().startsWith('+'),
   

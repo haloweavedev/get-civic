@@ -8,13 +8,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, Mail, CheckCircle, XCircle, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, CheckCircle, XCircle, RefreshCw, AlertCircle } from 'lucide-react';
 
 type EmailPreview = {
   id: string;
-  metadata: any;
-  createdAt: Date;
-  processedContent: string;
+  metadata: {
+    date: string;
+    fromName?: string;
+    source: string;
+    threadId: string;
+  };
+  subject: string;
+  from: string;
+  content: string;
+  createdAt: string | Date;
   status: string;
 };
 
@@ -75,16 +82,11 @@ export default function GmailIntegrationClient({
       }
 
       const data = await response.json();
-      toast.success(`Synced ${data.processed} new emails`);
+      toast.success(`Synced ${data.new} new emails`);
       router.refresh();
     } catch (error) {
-      const typedError = error as { code?: string; message?: string };
-      if (typedError.code === 'INSUFFICIENT_SCOPES') {
-        toast.error('Insufficient permissions. Please reconnect your Gmail account.');
-        // Optionally redirect user to reconnect
-      } else {
-        toast.error('Failed to sync emails');
-      }
+      toast.error('Failed to sync emails');
+      console.error('Sync error:', error);
     } finally {
       setIsSyncing(false);
     }
@@ -111,7 +113,7 @@ export default function GmailIntegrationClient({
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -127,7 +129,7 @@ export default function GmailIntegrationClient({
         return <Badge variant="default">Processed</Badge>;
       case 'PENDING':
         return <Badge variant="secondary">Pending</Badge>;
-      case 'ERROR':
+      case 'FAILED':
         return <Badge variant="destructive">Error</Badge>;
       default:
         return <Badge>{status}</Badge>;
@@ -238,9 +240,9 @@ export default function GmailIntegrationClient({
                             <CardContent className="pt-6">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
-                                  <h4 className="font-medium">{email.metadata.subject}</h4>
+                                  <h4 className="font-medium">{email.subject}</h4>
                                   <p className="text-sm text-muted-foreground">
-                                    From: {email.metadata.from.email}
+                                    From: {email.from}
                                   </p>
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -250,7 +252,7 @@ export default function GmailIntegrationClient({
                                   </span>
                                 </div>
                               </div>
-                              <p className="text-sm line-clamp-2">{email.processedContent}</p>
+                              <p className="text-sm line-clamp-2">{email.content}</p>
                             </CardContent>
                           </Card>
                         ))}

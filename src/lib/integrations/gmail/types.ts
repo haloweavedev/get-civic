@@ -10,10 +10,16 @@ export interface EmailMetadata {
   id: string;
   threadId: string;
   subject: string;
-  from: { email: string; name?: string };
-  to: { email: string; name?: string };
+  from: {
+    email: string;
+    name?: string;
+  };
+  to: {
+    email: string;
+    name?: string;
+  };
   date: string;
-  snippet?: string;
+  snippet: string;
   labels: string[];
 }
 

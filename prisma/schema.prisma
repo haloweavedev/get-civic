@@ -9,24 +9,83 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  role      UserRole @default(USER)
-  settings  Json?    @default("{}")
-  apiKey    String?  @unique // For API access
-  
-  // Usage and limits
-  apiUsage  Int      @default(0)
-  apiLimit  Int      @default(1000)
-  
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
+  id             String               @id @default(cuid())
+  email          String               @unique
+  name           String?
+  role           UserRole             @default(USER)
+  settings       Json?                @default("{}")
+  apiKey         String?              @unique
+  apiUsage       Int                  @default(0)
+  apiLimit       Int                  @default(1000)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   communications Communication[]
   organizations  OrganizationMember[]
+}
+
+model Organization {
+  id             String               @id @default(cuid())
+  name           String
+  settings       Json?                @default("{}")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  communications Communication[]      // One-to-many relation with Communication
+  members        OrganizationMember[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole   @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+}
+
+model Communication {
+  id               String           @id @default(cuid())
+  type             CommunicationType
+  sourceId         String           // Gmail message ID
+  direction        Direction        @default(INBOUND)
+  subject          String
+  from             String
+  content          String           // Email body
+  metadata         Json             // Additional metadata if needed
+  status           ProcessingStatus @default(PENDING)
+  userId           String
+  organizationId   String?          // Optional organization relationship
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id])
+  organization     Organization?    @relation(fields: [organizationId], references: [id])
+  analysis         Analysis?        // One-to-one relation with Analysis
+
+  @@unique([sourceId, userId])
+  @@index([createdAt])
+}
+
+model Analysis {
+  id              String        @id @default(cuid())
+  version         String
+  sentiment       Json
+  summary         String
+  categories      Json
+  entities        Json
+  intentions      String[]
+  priority        Int           @default(0)
+  language        String
+  confidence      Float
+  processingTime  Int
+  communicationId String        @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  communication   Communication @relation(fields: [communicationId], references: [id])
+
+  @@index([communicationId])
 }
 
 enum UserRole {
@@ -35,79 +94,10 @@ enum UserRole {
   VIEWER
 }
 
-model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  settings    Json?    @default("{}")
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  members         OrganizationMember[]
-  communications  Communication[]
-}
-
-model OrganizationMember {
-  id             String       @id @default(cuid())
-  organizationId String
-  userId         String
-  role           MemberRole   @default(MEMBER)
-  
-  // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  user           User         @relation(fields: [userId], references: [id])
-  
-  // Timestamps
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  @@unique([organizationId, userId])
-}
-
 enum MemberRole {
   OWNER
   ADMIN
   MEMBER
-}
-
-model Communication {
-  id               String             @id @default(cuid())
-  type             CommunicationType
-  direction        Direction
-  status           ProcessingStatus   @default(PENDING)
-  rawContent       String             // Original content
-  processedContent String?            // Cleaned/normalized content
-  metadata         Json               // Source-specific metadata
-
-  // Source identifiers
-  sourceId         String?            // External ID (e.g., Twilio SID)
-  source           String?            // Source system identifier
-
-  // Participants
-  participants     String[]           // Array of participant identifiers
-
-  // Error handling
-  errorDetails     String?
-  retryCount       Int                @default(0)
-
-  // Relationships
-  organizationId   String?
-  organization     Organization?      @relation(fields: [organizationId], references: [id])
-  userId           String
-  user             User               @relation(fields: [userId], references: [id])
-  analysis         Analysis?
-
-  // Timestamps
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  processedAt      DateTime?
-
-  @@unique([sourceId, userId, source])
-  @@index([type, status])
-  @@index([organizationId])
-  @@index([userId])
 }
 
 enum CommunicationType {
@@ -126,32 +116,4 @@ enum ProcessingStatus {
   PROCESSING
   PROCESSED
   FAILED
-}
-
-model Analysis {
-  id              String    @id @default(cuid())
-  version         String    // Analysis version/model used
-  
-  // Analysis results
-  sentiment       Json      // Sentiment analysis results
-  summary         String    // Generated summary
-  categories      Json      // Detected categories
-  entities        Json      // Extracted entities
-  intentions      String[]  // Detected intentions
-  priority        Int       @default(0)
-  
-  // Processing metadata
-  language        String    // Detected language
-  confidence      Float     // Analysis confidence score
-  processingTime  Int       // Processing time in milliseconds
-  
-  // Relations
-  communicationId String    @unique
-  communication   Communication @relation(fields: [communicationId], references: [id])
-  
-  // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([communicationId])
 }

@@ -1,4 +1,5 @@
 // src/app/(auth)/dashboard/page.tsx
+
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from "next/navigation";
 import { prisma } from '@/lib/prisma';
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
     where: { id: userId }
   });
 
-  // If no user found, sync first
+  // If no user found, redirect to sync
   if (!user) {
     const syncUrl = `/api/auth/sync?redirect=/dashboard`;
     redirect(syncUrl);

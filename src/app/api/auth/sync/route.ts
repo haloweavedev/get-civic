@@ -1,10 +1,11 @@
 // src/app/api/auth/sync/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+
+import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/integrations/utils';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -46,16 +47,15 @@ export async function GET(request: NextRequest) {
     });
 
     // Handle redirect if present
-    const redirectUrl = new URL(request.url).searchParams.get('redirect');
+    const url = new URL(request.url);
+    const redirectUrl = url.searchParams.get('redirect');
     if (redirectUrl) {
-      return NextResponse.redirect(new URL(redirectUrl, process.env.NEXT_PUBLIC_URL));
+      return NextResponse.redirect(new URL(redirectUrl, process.env.NEXT_PUBLIC_URL!));
     }
 
     return NextResponse.json({ success: true, user });
   } catch (error) {
     logger.error('User sync failed', error);
-    
-    // Return more detailed error for debugging
     return NextResponse.json(
       { 
         error: 'Sync failed',
@@ -65,6 +65,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-// Also handle POST for API calls
-export { GET as POST };

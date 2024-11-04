@@ -38,7 +38,7 @@ export function CommunicationsDashboard() {
   const [activeTab, setActiveTab] = useState('all');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const { data: response, refetch, isLoading } = useQuery<CommunicationsResponse>({
+  const { data: response, isLoading, refetch } = useQuery<CommunicationsResponse>({
     queryKey: ['communications', activeTab],
     queryFn: async () => {
       const response = await fetch(`/api/communications?type=${activeTab}`);

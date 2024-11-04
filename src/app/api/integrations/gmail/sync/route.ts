@@ -1,8 +1,10 @@
+// src/app/api/integrations/gmail/sync/route.ts
+
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { gmailClient } from '@/lib/integrations/gmail/client';
 import { logger } from '@/lib/integrations/utils';
-import { syncEmailBatch } from '@/lib/integrations/gmail/processor';
 
 export async function POST() {
   try {
@@ -11,48 +13,31 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    logger.info('Starting email sync', { userId });
-
-    // Check if Gmail is connected
+    // Get user's Gmail tokens
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { settings: true }
     });
 
     if (!user?.settings || !(user.settings as any).gmailTokens) {
-      logger.error('Gmail not connected', { userId });
       return NextResponse.json(
-        { error: 'Gmail not connected. Please connect Gmail first.' },
+        { error: 'Gmail not connected' },
         { status: 400 }
       );
     }
 
-    // Use the processor's syncEmailBatch function
-    const { total, new: newCount } = await syncEmailBatch(userId);
-
-    // Get accurate total count
-    const totalEmails = await prisma.communication.count({
-      where: {
-        userId,
-        source: 'GMAIL',
-        type: 'EMAIL'
-      }
-    });
-
-    logger.info('Sync completed', {
-      userId,
-      newEmails: newCount,
-      totalEmails
-    });
+    // Set credentials and sync
+    await gmailClient.setCredentials((user.settings as any).gmailTokens);
+    const result = await gmailClient.syncEmails(userId);
 
     return NextResponse.json({
       success: true,
-      processed: newCount,
-      total: totalEmails
+      ...result
     });
   } catch (error) {
-    logger.error('Email sync failed', { error });
+    logger.error('Email sync failed', error);
     return NextResponse.json(
-      { error: 'Sync failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Sync failed' },
       { status: 500 }
     );
   }

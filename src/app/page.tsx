@@ -207,7 +207,7 @@ export default function Home() {
                 <div className="h-[400px] w-full bg-gradient-to-b from-blue-600/20 to-blue-600/5 rounded-2xl p-8">
                   {/* You can add a screenshot or illustration here */}
                   <div className="h-full w-full border-2 border-blue-600/10 rounded-xl flex items-center justify-center text-blue-200">
-                    <Image src="/images/homepage-SS.png" alt="Screenshot of homepage" layout="fill" objectFit="cover" />
+                    <Image src="/images/homepage-preview-screenshot.webp" alt="Screenshot of homepage" width={500} height={500} style={{objectFit: "cover"}} />
                   </div>
                 </div>
               </div>

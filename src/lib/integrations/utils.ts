@@ -68,10 +68,13 @@ export function parseEmailAddress(email: string): {
   email: string;
   name?: string;
 } {
+  if (!email) return { email: '' };
+  
   const match = email.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
   if (!match) return { email };
+  
   return {
-    name: match[1],
-    email: match[2],
+    name: match[1]?.trim(),
+    email: match[2]?.trim() || email
   };
 }
