@@ -8,7 +8,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks/(.*)',
-  '/api/auth/(.*)',      // Added to allow auth routes
+  '/api/auth/(.*)', 
   '/api/integrations/(.*)',
   '/api/test-call',
   ...(process.env.NODE_ENV === 'development' ? ['/api/test(.*)'] : []),
