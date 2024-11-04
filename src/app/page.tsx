@@ -163,7 +163,7 @@ export default function Home() {
       </div>
 
       {/* Platform Section */}
-      <div id="platform" className="mt-32 sm:mt-40 relative overflow-hidden">
+      <div id="platform" className="mt-32 sm:mt-40 relative">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:grid-cols-2 lg:items-center">
             <div className="relative z-10">
