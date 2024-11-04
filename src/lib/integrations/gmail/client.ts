@@ -1,9 +1,9 @@
 import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
 import { IntegrationError } from '../errors';
-import { logger, handleIntegrationError, parseEmailAddress } from '../utils';
+import { logger } from '../utils';
 import { debugLog } from '@/lib/integrations/debug';
-import type { GmailTokens, EmailMetadata, EmailContent } from './types';
+import type { GmailTokens } from './types';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -13,37 +13,72 @@ const SCOPES = [
 class GmailClient {
   private static instance: GmailClient | null = null;
   private oauth2Client;
+  private initialized = false;
+
+  private getRedirectUri(): string {
+    // For local development
+    if (process.env.NODE_ENV === 'development') {
+      const localUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+      return `${localUrl}/api/integrations/gmail/callback`;
+    }
+    
+    // For production
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}/api/integrations/gmail/callback`;
+    }
+    
+    // Fallback
+    return `${process.env.NEXT_PUBLIC_URL}/api/integrations/gmail/callback`;
+  }
 
   private constructor() {
     const clientId = process.env.GMAIL_CLIENT_ID;
     const clientSecret = process.env.GMAIL_CLIENT_SECRET;
     
-    // Dynamic redirect URI based on environment
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_URL;
-      
-    const redirectUri = `${baseUrl}/api/integrations/gmail/callback`;
+    // Log configuration for debugging
+    debugLog('Gmail Client Configuration', {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      environment: process.env.NODE_ENV,
+      redirectUri: this.getRedirectUri()
+    });
 
     if (!clientId || !clientSecret) {
+      logger.error('Gmail credentials missing', {
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret,
+        environment: process.env.NODE_ENV
+      });
+
       throw new IntegrationError(
-        'Missing Gmail credentials',
+        'Gmail credentials missing. Please check your environment variables.',
         'GMAIL_CONFIG_ERROR',
         500
       );
     }
 
-    logger.info('Initializing Gmail client', { 
-      baseUrl,
-      redirectUri,
-      environment: process.env.NODE_ENV
-    });
+    try {
+      this.oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        this.getRedirectUri()
+      );
+      
+      this.initialized = true;
 
-    this.oauth2Client = new google.auth.OAuth2(
-      clientId,
-      clientSecret,
-      redirectUri
-    );
+      logger.info('Gmail client initialized', { 
+        redirectUri: this.getRedirectUri(),
+        environment: process.env.NODE_ENV
+      });
+    } catch (error) {
+      logger.error('Failed to initialize Gmail client', error);
+      throw new IntegrationError(
+        'Failed to initialize Gmail client',
+        'GMAIL_INIT_ERROR',
+        500,
+        error
+      );
+    }
   }
 
   public static getInstance(): GmailClient {

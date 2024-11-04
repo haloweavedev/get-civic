@@ -1,7 +1,7 @@
-// src/app/api/communications/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/integrations/utils';
 
 export async function GET(request: Request) {
   try {
@@ -11,27 +11,47 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
+    const source = searchParams.get('source');
     const type = searchParams.get('type');
+    const limit = parseInt(searchParams.get('limit') || '10');
+
+    // Build where clause
+    const where = {
+      userId,
+      ...(source && { source }),
+      ...(type && type !== 'all' && { type })
+    };
+
+    logger.info('Fetching communications', { where, limit });
 
     const communications = await prisma.communication.findMany({
-      where: {
-        userId,
-        ...(type && type !== 'all' ? { type } : {}),
-      },
+      where,
       orderBy: {
         createdAt: 'desc'
       },
-      take: 10,
+      take: limit,
       include: {
         analysis: true
       }
     });
 
-    return NextResponse.json(communications);
+    logger.info('Found communications', { count: communications.length });
+
+    return NextResponse.json({
+      success: true,
+      data: communications
+    });
+
   } catch (error) {
-    console.error('Failed to fetch communications:', error);
+    logger.error('Failed to fetch communications', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
     return NextResponse.json(
-      { error: 'Failed to fetch communications' },
+      { 
+        success: false,
+        error: 'Failed to fetch communications'
+      }, 
       { status: 500 }
     );
   }

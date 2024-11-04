@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { handleHistoryUpdate } from '@/lib/integrations/gmail/handlers/email';
 import { prisma } from '@/lib/prisma';
 import { gmailClient } from '@/lib/integrations/gmail/client';
-import type { UserSettings } from '@/lib/integrations/gmail/types';
+import { logger } from '@/lib/integrations/utils';
+import { GmailTokens } from '@/lib/integrations/gmail/types';
+import { syncEmailBatch } from '@/lib/integrations/gmail/processor';
+import { IntegrationError } from '@/lib/integrations/errors';
 
 export async function POST(req: Request) {
   try {
@@ -16,22 +18,37 @@ export async function POST(req: Request) {
       }
     });
 
-    const settings = user.settings as UserSettings;
+    const settings = user.settings as { gmailTokens?: GmailTokens };
     const tokens = settings.gmailTokens;
     
     if (!tokens) {
-      throw new Error('No Gmail tokens found');
+      throw new IntegrationError('No Gmail tokens found', 'NO_TOKENS', 401);
     }
 
     await gmailClient.setCredentials(tokens);
-    await handleHistoryUpdate(historyId);
+    
+    // Sync recent emails when we receive a webhook
+    // This is a simpler approach than implementing history.list
+    await syncEmailBatch(user.id, 10);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
+    
+    const integrationError = error instanceof IntegrationError ? error : new IntegrationError(
+      'Webhook processing failed',
+      'WEBHOOK_ERROR',
+      500,
+      error
+    );
+
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
+      { 
+        error: integrationError.message,
+        code: integrationError.code,
+        details: integrationError.details
+      },
+      { status: integrationError.status || 500 }
     );
   }
 }

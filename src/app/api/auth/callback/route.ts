@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { gmailClient } from '@/lib/integrations/gmail/client';
 import { prisma } from '@/lib/prisma';
-import type { UserSettings } from '@/lib/integrations/gmail/types';
+import { logger } from '@/lib/integrations/utils';
+import { GmailTokens } from '@/lib/integrations/gmail/types';
+import { syncEmailBatch } from '@/lib/integrations/gmail/processor';
+import { IntegrationError } from '@/lib/integrations/errors';
 
 export async function GET(req: Request) {
   try {
@@ -9,26 +12,26 @@ export async function GET(req: Request) {
     const code = url.searchParams.get('code');
     const error = url.searchParams.get('error');
 
-    console.log('Callback received:', { code, error });
+    logger.info('Callback received', { code: !!code, error });
 
     if (error) {
-      console.error('OAuth error:', error);
+      logger.error('OAuth error:', { error });
       return NextResponse.redirect(
-        new URL('/dashboard/settings/email?error=' + encodeURIComponent(error), 
+        new URL('/dashboard/integrations/gmail?error=' + encodeURIComponent(error), 
         process.env.NEXT_PUBLIC_URL!)
       );
     }
 
     if (!code) {
       return NextResponse.redirect(
-        new URL('/dashboard/settings/email?error=no_code', 
+        new URL('/dashboard/integrations/gmail?error=no_code', 
         process.env.NEXT_PUBLIC_URL!)
       );
     }
 
     // Exchange code for tokens
     const tokens = await gmailClient.getTokens(code);
-    console.log('Received tokens');
+    logger.info('Received Gmail tokens');
     
     // Save tokens securely
     const user = await prisma.user.upsert({
@@ -38,35 +41,43 @@ export async function GET(req: Request) {
       update: {
         settings: {
           gmailTokens: tokens
-        } as UserSettings
+        }
       },
       create: {
         email: 'haloweaveinsights@gmail.com',
         role: 'ADMIN',
         settings: {
           gmailTokens: tokens
-        } as UserSettings
+        }
       }
     });
 
-    console.log('Updated user');
+    logger.info('Updated user settings');
 
     // Set up Gmail credentials
-    await gmailClient.setCredentials(tokens);
+    await gmailClient.setCredentials(tokens as GmailTokens);
 
     // Initial sync of recent emails
-    const { syncRecentEmails } = await import('@/lib/integrations/gmail/handlers/email');
-    await syncRecentEmails(50);
+    await syncEmailBatch(user.id, 50);
 
     return NextResponse.redirect(
-      new URL('/dashboard/settings/email?success=true', 
+      new URL('/dashboard/integrations/gmail?success=true', 
       process.env.NEXT_PUBLIC_URL!)
     );
   } catch (error) {
-    console.error('Callback error:', error);
+    logger.error('Callback error:', error);
+    const integrationError = error instanceof IntegrationError ? error : new IntegrationError(
+      'Failed to process callback',
+      'CALLBACK_ERROR',
+      500,
+      error
+    );
+    
     return NextResponse.redirect(
-      new URL('/dashboard/settings/email?error=internal_error', 
-      process.env.NEXT_PUBLIC_URL!)
+      new URL(
+        `/dashboard/integrations/gmail?error=${encodeURIComponent(integrationError.message)}`,
+        process.env.NEXT_PUBLIC_URL!
+      )
     );
   }
 }
