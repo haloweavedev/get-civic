@@ -1,4 +1,3 @@
-// src/lib/integrations/gmail/client.ts
 import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
 import { IntegrationError } from '../errors';
@@ -7,8 +6,9 @@ import { debugLog } from '@/lib/integrations/debug';
 import type { GmailTokens, EmailMetadata, EmailContent } from './types';
 
 const SCOPES = [
-    'https://www.googleapis.com/auth/gmail.readonly'
-  ];
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify'
+];
 
 class GmailClient {
   private static instance: GmailClient | null = null;
@@ -17,7 +17,13 @@ class GmailClient {
   private constructor() {
     const clientId = process.env.GMAIL_CLIENT_ID;
     const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-    const redirectUri = `${process.env.NEXT_PUBLIC_URL}/api/integrations/gmail/callback`;
+    
+    // Dynamic redirect URI based on environment
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_URL;
+      
+    const redirectUri = `${baseUrl}/api/integrations/gmail/callback`;
 
     if (!clientId || !clientSecret) {
       throw new IntegrationError(
@@ -27,7 +33,17 @@ class GmailClient {
       );
     }
 
-    this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+    logger.info('Initializing Gmail client', { 
+      baseUrl,
+      redirectUri,
+      environment: process.env.NODE_ENV
+    });
+
+    this.oauth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      redirectUri
+    );
   }
 
   public static getInstance(): GmailClient {
@@ -37,17 +53,18 @@ class GmailClient {
     return GmailClient.instance;
   }
 
-public getAuthUrl(): string {
+  public getAuthUrl(): string {
     try {
       return this.oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: SCOPES,
-        prompt: 'consent' // Removed include_granted_scopes
+        prompt: 'consent',
+        include_granted_scopes: true
       });
     } catch (error) {
       throw handleIntegrationError(error, 'Gmail', 'getAuthUrl');
     }
-  }  
+  }
 
   public async getTokens(code: string): Promise<GmailTokens> {
     try {
@@ -65,70 +82,66 @@ public getAuthUrl(): string {
     }
   }
 
+  public async setCredentials(tokens: GmailTokens): Promise<void> {
+    try {
+      this.oauth2Client.setCredentials(tokens);
+      logger.info('Gmail credentials set successfully');
+    } catch (error) {
+      throw handleIntegrationError(error, 'Gmail', 'setCredentials');
+    }
+  }
+
   private async ensureValidToken(userId: string): Promise<void> {
     try {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({ 
+        where: { id: userId },
+        select: { 
+          id: true,
+          email: true,
+          settings: true
+        }
+      });
+
       debugLog('ensureValidToken - User Data', { 
         userId,
         hasSettings: !!user?.settings,
-        settingsContent: user?.settings 
+        environment: process.env.NODE_ENV
       });
   
       if (!user?.settings) {
         throw new IntegrationError('User not found or no settings', 'USER_NOT_FOUND', 404);
       }
   
-      const settings = user.settings as { gmailTokens?: string | GmailTokens };
-      // Parse tokens if they're a string
-      const tokens = typeof settings.gmailTokens === 'string' 
-        ? JSON.parse(settings.gmailTokens) 
-        : settings.gmailTokens;
+      const settings = user.settings as { gmailTokens?: GmailTokens };
+      const tokens = settings.gmailTokens;
   
-      debugLog('ensureValidToken - Tokens', { 
-        hasTokens: !!tokens,
-        expiryDate: tokens?.expiry_date,
-        currentTime: Date.now(),
-        timeToExpiry: tokens?.expiry_date ? tokens.expiry_date - Date.now() : null,
-        parsedTokens: tokens  // Log the parsed tokens
-      });
+      if (!tokens) {
+        throw new IntegrationError('No Gmail tokens found', 'NO_TOKENS', 401);
+      }
 
-      // Set credentials with the parsed tokens
       this.oauth2Client.setCredentials(tokens);
   
-      if (!tokens.scope || !tokens.scope.includes('https://www.googleapis.com/auth/gmail.readonly')) {
-        throw new IntegrationError(
-          'Access token does not have the required scopes. Please reconnect your Gmail account.',
-          'INSUFFICIENT_SCOPES',
-          403
-        );
-      }
-  
-      // Check expiry and refresh if needed
+      // Check token expiry
       if (tokens.expiry_date && tokens.expiry_date < Date.now() + 5 * 60 * 1000) {
-        debugLog('ensureValidToken - Refreshing Token', {
-          reason: 'Token expired or expiring soon'
-        });
+        logger.info('Refreshing Gmail token', { userId });
         
         const { credentials } = await this.oauth2Client.refreshAccessToken();
         
         await prisma.user.update({
           where: { id: userId },
           data: { 
-            settings: { 
-              ...user.settings, 
-              gmailTokens: credentials  // Store as object
-            } 
+            settings: {
+              ...user.settings,
+              gmailTokens: credentials
+            }
           }
         });
   
         this.oauth2Client.setCredentials(credentials);
         
-        debugLog('ensureValidToken - Token Refreshed', {
-          newExpiryDate: credentials.expiry_date
-        });
+        logger.info('Gmail token refreshed', { userId });
       }
     } catch (error) {
-      debugLog('ensureValidToken - Error', { error });
       throw handleIntegrationError(error, 'Gmail', 'ensureValidToken');
     }
   }

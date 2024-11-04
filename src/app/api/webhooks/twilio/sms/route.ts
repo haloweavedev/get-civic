@@ -1,24 +1,27 @@
 // src/app/api/webhooks/twilio/sms/route.ts
-
+import { NextResponse } from 'next/server';
 import { twilioProcessor } from '@/lib/integrations/twilio/handlers/processor';
-import { logger, handleIntegrationError } from '@/lib/integrations/utils';
-import type { TwilioSMSWebhookPayload } from '@/lib/integrations/twilio/types';
-import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/integrations/utils';
+import { TwilioSMSWebhookPayload } from '@/lib/integrations/twilio/types';
+
+const getWebhookUrl = () => {
+  return process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}/api/webhooks/twilio/sms`
+    : `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/sms`;
+};
 
 export async function POST(req: Request) {
-  logger.info('Received Twilio SMS webhook', { source: 'TWILIO', action: 'sms_webhook' });
-
   try {
-    const url = `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/sms`;
+    const webhookUrl = getWebhookUrl();
+    logger.info('Received SMS webhook', { 
+      environment: process.env.NODE_ENV,
+      webhookUrl 
+    });
 
-    // Validate webhook
-    const isValid = await twilioProcessor.validateWebhook(req.clone(), url);
+    // Validate webhook signature
+    const isValid = await twilioProcessor.validateWebhook(req.clone(), webhookUrl);
     if (!isValid) {
-      logger.error('Invalid Twilio signature', new Error('Signature validation failed'), {
-        source: 'TWILIO',
-        action: 'webhook_validation',
-      });
-      return new Response('Invalid signature', { status: 403 });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
     }
 
     // Process webhook payload
