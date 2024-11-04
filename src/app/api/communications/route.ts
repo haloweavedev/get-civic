@@ -1,3 +1,5 @@
+// src/app/api/communications/route.ts
+
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
@@ -11,21 +13,27 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const source = searchParams.get('source');
     const type = searchParams.get('type');
+    const source = searchParams.get('source');
     const limit = parseInt(searchParams.get('limit') || '10');
 
     // Build where clause
-    const where = {
+    const where: any = {
       userId,
-      ...(type && type !== 'all' && { type }),
-      ...(source && {
-        metadata: {
-          path: ['source'],
-          equals: source
-        }
-      })
     };
+
+    // Only add type filter if specific type is requested
+    if (type && type !== 'all') {
+      where.type = type;
+    }
+
+    // Only add source filter if specified
+    if (source) {
+      where.metadata = {
+        path: ['source'],
+        equals: source
+      };
+    }
 
     logger.info('Fetching communications', { where, limit });
 

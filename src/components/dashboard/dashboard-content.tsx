@@ -1,13 +1,17 @@
 // src/components/dashboard/dashboard-content.tsx
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Activity, Users, BarChart } from "lucide-react";
+import { CommunicationsDashboard } from "./communications/communications-dashboard";
 import { IntegrationsStatus } from "./integrations/integrations-status";
-import CommunicationsDashboard from "./communications/communications-dashboard";
 
-// Named export for DashboardContent
-export function DashboardContent({ userId }: { userId: string }) {
+interface DashboardContentProps {
+  userId: string;
+}
+
+export function DashboardContent({ userId }: DashboardContentProps) {
   return (
     <div className="space-y-8">
       <div>
@@ -98,5 +102,5 @@ export function DashboardContent({ userId }: { userId: string }) {
   );
 }
 
-// Default export for flexibility
+// Also add a default export
 export default DashboardContent;

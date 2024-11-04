@@ -1,90 +1,83 @@
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Globe, MessageCircle, Activity, Zap, Shield } from "lucide-react";
 import Image from 'next/image';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <div className="relative isolate">
-        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
-          <div
-            className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
-            style={{
-              clipPath:
-                'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
-            }}
-          />
-        </div>
+    <div className="min-h-screen bg-gray-50 overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-400 opacity-20 blur-[100px]"></div>
+        <div className="absolute bottom-0 left-0 right-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-violet-400 opacity-20 blur-[100px]"></div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <div className="flex-shrink-0">
-                <Link href="/" className="text-2xl font-semibold">
-                  Senate Insights
+      {/* Navigation */}
+      <nav className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex-shrink-0">
+              <Link href="/" className="text-2xl font-semibold text-gray-900">
+                Senate Insights
+              </Link>
+            </div>
+            <div className="hidden md:flex md:items-center md:space-x-6">
+              <Link href="#features" className="text-sm text-gray-700 hover:text-gray-900">
+                Features
+              </Link>
+              <Link href="#security" className="text-sm text-gray-700 hover:text-gray-900">
+                Security
+              </Link>
+              <Link href="#platform" className="text-sm text-gray-700 hover:text-gray-900">
+                Platform
+              </Link>
+              <SignedOut>
+                <Link href="/sign-in">
+                  <Button variant="outline" className="ml-4">
+                    Sign In
+                  </Button>
                 </Link>
-              </div>
-              <div className="hidden md:flex md:items-center md:space-x-6">
-                <Link href="#features" className="text-sm text-gray-700 hover:text-gray-900">
-                  Features
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button>Dashboard</Button>
                 </Link>
-                <Link href="#security" className="text-sm text-gray-700 hover:text-gray-900">
-                  Security
-                </Link>
-                <Link href="#platform" className="text-sm text-gray-700 hover:text-gray-900">
-                  Platform
-                </Link>
-                <SignedOut>
-                  <Link href="/sign-in">
-                    <Button variant="outline" className="ml-4">
-                      Sign In
-                    </Button>
-                  </Link>
-                </SignedOut>
-                <SignedIn>
-                  <Link href="/dashboard">
-                    <Button>Dashboard</Button>
-                  </Link>
-                </SignedIn>
-              </div>
+              </SignedIn>
             </div>
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        {/* Hero Content */}
-        <div className="pt-32 sm:pt-40">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <h1 className="text-4xl font-semibold tracking-tight sm:text-6xl bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Transform Public Communication with AI
-              </h1>
-              <p className="mt-6 text-lg leading-8 text-gray-600">
-                Automate constituent feedback analysis, generate insights at scale, and deliver personalized responses through advanced AI technology.
-              </p>
-              <div className="mt-10 flex items-center justify-center gap-x-6">
-                <SignedOut>
-                  <Link href="/sign-up">
-                    <Button size="lg" className="rounded-md px-8">
-                      Get Started
-                    </Button>
-                  </Link>
-                  <Link href="/contact" className="text-sm font-semibold leading-6 text-gray-900">
-                    Contact Sales <span aria-hidden="true">→</span>
-                  </Link>
-                </SignedOut>
-                <SignedIn>
-                  <Link href="/dashboard">
-                    <Button size="lg" className="rounded-md px-8">
-                      Go to Dashboard
-                    </Button>
-                  </Link>
-                </SignedIn>
-              </div>
+      {/* Hero Section */}
+      <div className="relative pt-32 sm:pt-40 lg:pt-48">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900">
+              Transform Public Communication with AI
+            </h1>
+            <p className="mt-6 text-lg leading-8 text-gray-600">
+              Automate constituent feedback analysis, generate insights at scale, and deliver personalized responses through advanced AI technology.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-x-6">
+              <SignedOut>
+                <Link href="/sign-up">
+                  <Button size="lg" className="rounded-md px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 transition-all duration-300">
+                    Get Started
+                  </Button>
+                </Link>
+                <Link href="/contact" className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors duration-300">
+                  Contact Sales <span aria-hidden="true">→</span>
+                </Link>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button size="lg" className="rounded-md px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 transition-all duration-300">
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              </SignedIn>
             </div>
           </div>
         </div>
@@ -124,7 +117,9 @@ export default function Home() {
             {/* Automated Analysis */}
             <div className="flex flex-col">
               <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
-                <Activity className="h-5 w-5 flex-none text-blue-600" />
+                <div className="rounded-md bg-blue-600/10 p-2 ring-1 ring-inset ring-blue-600/20">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                </div>
                 Automated Analysis
               </dt>
               <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
@@ -137,7 +132,9 @@ export default function Home() {
             {/* Unified Communication */}
             <div className="flex flex-col">
               <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
-                <MessageCircle className="h-5 w-5 flex-none text-blue-600" />
+                <div className="rounded-md bg-blue-600/10 p-2 ring-1 ring-inset ring-blue-600/20">
+                  <MessageCircle className="h-5 w-5 text-blue-600" />
+                </div>
                 Unified Communication
               </dt>
               <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
@@ -150,7 +147,9 @@ export default function Home() {
             {/* Smart Responses */}
             <div className="flex flex-col">
               <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
-                <Zap className="h-5 w-5 flex-none text-blue-600" />
+                <div className="rounded-md bg-blue-600/10 p-2 ring-1 ring-inset ring-blue-600/20">
+                  <Zap className="h-5 w-5 text-blue-600" />
+                </div>
                 Smart Responses
               </dt>
               <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
@@ -164,10 +163,10 @@ export default function Home() {
       </div>
 
       {/* Platform Section */}
-      <div id="platform" className="mt-32 sm:mt-40 relative">
+      <div id="platform" className="mt-32 sm:mt-40 relative overflow-hidden">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:grid-cols-2 lg:items-center">
-            <div>
+            <div className="relative z-10">
               <h2 className="text-base font-semibold leading-7 text-blue-600">
                 Advanced Technology
               </h2>
@@ -202,12 +201,21 @@ export default function Home() {
             </div>
 
             {/* Platform Visual */}
-            <div className="relative isolate overflow-hidden rounded-3xl bg-gray-900 px-6 pt-8 sm:mx-auto sm:max-w-2xl sm:px-8 lg:max-w-none lg:pt-0">
-              <div className="relative mx-auto max-w-2xl lg:mx-0 lg:max-w-none">
-                <div className="h-[400px] w-full bg-gradient-to-b from-blue-600/20 to-blue-600/5 rounded-2xl p-8">
-                  {/* You can add a screenshot or illustration here */}
-                  <div className="h-full w-full border-2 border-blue-600/10 rounded-xl flex items-center justify-center text-blue-200">
-                    <Image src="/images/homepage-preview-screenshot.webp" alt="Screenshot of homepage" width={500} height={500} style={{objectFit: "cover"}} />
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-64 w-64 rounded-full bg-blue-400 opacity-50 blur-3xl"></div>
+                <div className="h-64 w-64 rounded-full bg-violet-400 opacity-50 blur-3xl"></div>
+              </div>
+              <div className="relative mx-auto max-w-2xl">
+                <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur">
+                  <div className="p-8">
+                    <Image 
+                      src="/images/homepage-preview-screenshot.webp" 
+                      alt="Screenshot of homepage" 
+                      width={500} 
+                      height={500} 
+                      className="rounded-2xl shadow-2xl ring-1 ring-gray-900/10"
+                    />
                   </div>
                 </div>
               </div>
@@ -217,8 +225,9 @@ export default function Home() {
       </div>
 
       {/* Call to Action */}
-      <div className="mt-32 sm:mt-40 mb-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mt-32 sm:mt-40 mb-24 relative">
+        <div className="absolute inset-0 h-1/2"></div>
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
               Ready to transform your communication?
@@ -229,20 +238,20 @@ export default function Home() {
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <SignedOut>
                 <Link href="/sign-up">
-                  <Button size="lg" className="rounded-md px-8">
+                  <Button size="lg" className="rounded-md px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 transition-all duration-300">
                     Get Started Today
                   </Button>
                 </Link>
                 <Link
                   href="/contact"
-                  className="text-sm font-semibold leading-6 text-gray-900"
+                  className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors duration-300"
                 >
                   Contact Sales <span aria-hidden="true">→</span>
                 </Link>
               </SignedOut>
               <SignedIn>
                 <Link href="/dashboard">
-                  <Button size="lg" className="rounded-md px-8">
+                  <Button size="lg" className="rounded-md px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 transition-all duration-300">
                     Go to Dashboard
                   </Button>
                 </Link>

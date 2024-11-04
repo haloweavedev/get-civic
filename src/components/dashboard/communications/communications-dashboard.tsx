@@ -1,19 +1,23 @@
-"use client";
+// src/components/dashboard/communications/communications-dashboard.tsx
+'use client';
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Loader2, Mail, Phone, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
-// Add type export
 export type CommunicationItem = {
   id: string;
   type: 'EMAIL' | 'CALL' | 'SMS';
   direction: 'INBOUND' | 'OUTBOUND';
+  subject: string;
+  from: string;
+  content: string;
   metadata: any;
   status: string;
   createdAt: string;
@@ -22,8 +26,12 @@ export type CommunicationItem = {
       score: number;
       label: string;
     };
-    categories: string[];
+    categories: {
+      primary: string;
+      secondary: string[];
+    };
     summary?: string;
+    priority: number;
   };
 };
 
@@ -33,7 +41,6 @@ interface CommunicationsResponse {
   error?: string;
 }
 
-// Named export for CommunicationsDashboard
 export function CommunicationsDashboard() {
   const [activeTab, setActiveTab] = useState('all');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -41,7 +48,13 @@ export function CommunicationsDashboard() {
   const { data: response, isLoading, refetch } = useQuery<CommunicationsResponse>({
     queryKey: ['communications', activeTab],
     queryFn: async () => {
-      const response = await fetch(`/api/communications?type=${activeTab}`);
+      // Modify the query parameters based on the active tab
+      const params = new URLSearchParams();
+      if (activeTab !== 'all') {
+        params.append('type', activeTab);
+      }
+
+      const response = await fetch(`/api/communications?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch communications');
       }
@@ -52,7 +65,6 @@ export function CommunicationsDashboard() {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      // Sync Gmail
       const gmailResponse = await fetch('/api/integrations/gmail/sync', { method: 'POST' });
       if (!gmailResponse.ok) {
         throw new Error('Gmail sync failed');
@@ -77,10 +89,32 @@ export function CommunicationsDashboard() {
     }
   };
 
-  const getSentimentColor = (score: number) => {
-    if (score > 0.5) return 'text-green-500';
-    if (score < -0.5) return 'text-red-500';
-    return 'text-yellow-500';
+  const getPriorityBadge = (priority: number) => {
+    const colors = {
+      5: 'bg-red-100 text-red-800',
+      4: 'bg-orange-100 text-orange-800',
+      3: 'bg-yellow-100 text-yellow-800',
+      2: 'bg-blue-100 text-blue-800',
+      1: 'bg-gray-100 text-gray-800'
+    };
+    return (
+      <Badge className={colors[priority as keyof typeof colors] || colors[1]}>
+        P{priority}
+      </Badge>
+    );
+  };
+
+  const getSentimentBadge = (sentiment: { label: string; score: number }) => {
+    const colors = {
+      positive: 'bg-green-100 text-green-800',
+      negative: 'bg-red-100 text-red-800',
+      neutral: 'bg-gray-100 text-gray-800'
+    };
+    return (
+      <Badge className={colors[sentiment.label.toLowerCase() as keyof typeof colors] || colors.neutral}>
+        {sentiment.label}
+      </Badge>
+    );
   };
 
   if (isLoading) {
@@ -143,7 +177,7 @@ export function CommunicationsDashboard() {
                         <div className="flex items-center gap-2">
                           {getIconForType(item.type)}
                           <span className="font-medium">
-                            {item.metadata.subject || item.metadata.from}
+                            {item.subject || item.from}
                           </span>
                         </div>
                         <div className="text-sm text-gray-500">
@@ -152,28 +186,20 @@ export function CommunicationsDashboard() {
                       </div>
                       
                       <div className="text-sm text-gray-600 mb-2">
-                        From: {typeof item.metadata.from === 'object' 
-                          ? item.metadata.from.email 
-                          : item.metadata.from}
+                        From: {item.from}
                       </div>
                       
                       {item.analysis && (
                         <div className="mt-2 text-sm">
-                          <div className="flex gap-2">
-                            <span className={getSentimentColor(item.analysis.sentiment.score)}>
-                              {item.analysis.sentiment.label}
-                            </span>
-                            {item.analysis.categories.map((category, index) => (
-                              <span
-                                key={index}
-                                className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs"
-                              >
-                                {category}
-                              </span>
-                            ))}
+                          <div className="flex gap-2 items-center">
+                            {getSentimentBadge(item.analysis.sentiment)}
+                            {getPriorityBadge(item.analysis.priority)}
+                            <Badge variant="outline">
+                              {item.analysis.categories.primary}
+                            </Badge>
                           </div>
                           {item.analysis.summary && (
-                            <p className="mt-1 text-gray-700">{item.analysis.summary}</p>
+                            <p className="mt-2 text-gray-700">{item.analysis.summary}</p>
                           )}
                         </div>
                       )}
@@ -192,5 +218,3 @@ export function CommunicationsDashboard() {
     </div>
   );
 }
-
-export default CommunicationsDashboard;

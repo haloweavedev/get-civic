@@ -17,11 +17,9 @@ interface CommunicationStats {
 }
 
 async function fetchCommunicationStats(): Promise<CommunicationStats> {
-  // Fetch Gmail communications
   const emailResponse = await fetch('/api/communications?source=GMAIL&type=EMAIL');
   const emailData = await emailResponse.json();
   
-  // Fetch Twilio communications
   const twilioResponse = await fetch('/api/communications?source=TWILIO');
   const twilioData = await twilioResponse.json();
 
@@ -43,7 +41,6 @@ async function fetchCommunicationStats(): Promise<CommunicationStats> {
   };
 }
 
-// Named export for IntegrationsStatus
 export function IntegrationsStatus() {
   const { 
     data: stats,
@@ -68,13 +65,13 @@ export function IntegrationsStatus() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle>Integration Status</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
           </div>
         </CardContent>
       </Card>
@@ -83,7 +80,7 @@ export function IntegrationsStatus() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle>Integration Status</CardTitle>
         </CardHeader>
@@ -98,7 +95,7 @@ export function IntegrationsStatus() {
   const hasTwilioActivity = (stats?.callCount ?? 0) > 0 || (stats?.smsCount ?? 0) > 0;
 
   return (
-    <Card>
+    <Card className="border border-gray-200 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Integration Status</CardTitle>
@@ -107,6 +104,7 @@ export function IntegrationsStatus() {
             size="sm"
             onClick={handleRefresh}
             disabled={isRefetching}
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
           >
             {isRefetching ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -122,26 +120,26 @@ export function IntegrationsStatus() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Gmail Integration</span>
+                <span className="font-medium text-gray-900">Gmail Integration</span>
                 {hasGmailActivity ? (
-                  <Badge variant="default" className="ml-2">
+                  <Badge variant="default" className="ml-2 bg-green-100 text-green-800">
                     <CheckCircle className="mr-1 h-4 w-4" />
                     Active
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-800">
                     <XCircle className="mr-1 h-4 w-4" />
                     No Activity
                   </Badge>
                 )}
               </div>
               {stats?.lastSync && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-500">
                   Last activity: {formatDistanceToNow(new Date(stats.lastSync), { addSuffix: true })}
                 </span>
               )}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-gray-600">
               Total emails: {stats?.emailCount ?? 0}
             </div>
           </div>
@@ -150,30 +148,30 @@ export function IntegrationsStatus() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Twilio Integration</span>
+                <span className="font-medium text-gray-900">Twilio Integration</span>
                 {hasTwilioActivity ? (
-                  <Badge variant="default" className="ml-2">
+                  <Badge variant="default" className="ml-2 bg-green-100 text-green-800">
                     <CheckCircle className="mr-1 h-4 w-4" />
                     Active
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-800">
                     <XCircle className="mr-1 h-4 w-4" />
                     No Activity
                   </Badge>
                 )}
               </div>
               {stats?.lastWebhook && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-500">
                   Last activity: {formatDistanceToNow(new Date(stats.lastWebhook), { addSuffix: true })}
                 </span>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-gray-600">
                 Total calls: {stats?.callCount ?? 0}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-gray-600">
                 Total SMS: {stats?.smsCount ?? 0}
               </div>
             </div>
