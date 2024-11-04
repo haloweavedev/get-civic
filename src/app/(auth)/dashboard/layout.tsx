@@ -50,7 +50,7 @@ const navigation = [
   },
   { 
     name: 'API', 
-    href: '',
+    href: '/dashboard/api',
     icon: Code
   },
   { 
