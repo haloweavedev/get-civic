@@ -40,6 +40,15 @@ interface Props {
 
 export function RecentCommunicationsTable({ communications }: Props) {
   const [selectedComm, setSelectedComm] = useState<Communication | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 6;
+  const totalCommunications = 33;
+
+  // Limit to the latest 33 communications
+  const limitedCommunications = communications.slice(0, totalCommunications);
+
+  const totalPages = Math.ceil(limitedCommunications.length / itemsPerPage);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -87,9 +96,18 @@ export function RecentCommunicationsTable({ communications }: Props) {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Determine the communications to display on the current page
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCommunications = limitedCommunications.slice(startIndex, endIndex);
 
   return (
     <>
@@ -111,28 +129,26 @@ export function RecentCommunicationsTable({ communications }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {communications.slice(0, 4).map((comm) => (
+                {currentCommunications.map((comm) => (
                   <tr key={comm.id} className="bg-white border-b hover:bg-gray-50">
                     <td className="px-6 py-4 flex items-center gap-2">
                       {getTypeIcon(comm.type)}
                       <span>{comm.type}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      {formatDate(comm.createdAt)}
-                    </td>
+                    <td className="px-6 py-4">{formatDate(comm.createdAt)}</td>
                     <td className="px-6 py-4">
                       {comm.analysis?.categories.primary || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge 
-                        className={getPriorityColor(comm.analysis?.priority || 0)}
-                      >
+                      <Badge className={getPriorityColor(comm.analysis?.priority || 0)}>
                         P{comm.analysis?.priority || 'N/A'}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge 
-                        className={getSentimentColor(comm.analysis?.sentiment.label || '')}
+                      <Badge
+                        className={getSentimentColor(
+                          comm.analysis?.sentiment.label || ''
+                        )}
                       >
                         {comm.analysis?.sentiment.label || 'N/A'}
                       </Badge>
@@ -150,6 +166,27 @@ export function RecentCommunicationsTable({ communications }: Props) {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between items-center mt-4">
+            <Button
+              variant="outline"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <div className="text-sm">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              Next
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -183,8 +220,10 @@ export function RecentCommunicationsTable({ communications }: Props) {
               <div>
                 <span className="text-sm font-medium text-gray-500">Sentiment</span>
                 <div className="mt-1">
-                  <Badge 
-                    className={getSentimentColor(selectedComm?.analysis?.sentiment.label || '')}
+                  <Badge
+                    className={getSentimentColor(
+                      selectedComm?.analysis?.sentiment.label || ''
+                    )}
                   >
                     {selectedComm?.analysis?.sentiment.label || 'N/A'}
                   </Badge>
