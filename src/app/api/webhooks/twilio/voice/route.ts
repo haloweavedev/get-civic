@@ -1,89 +1,52 @@
-import { validateRequest } from 'twilio';
-import { handleIncomingCall } from '@/lib/integrations/twilio/handlers/call';
-import { TwilioCallWebhookPayload } from '@/lib/integrations/twilio/types';
-import { logger } from '@/lib/integrations/utils';
+// src/app/api/webhooks/twilio/voice/route.ts
+import twilio from 'twilio';
+import { prisma } from '@/lib/prisma';
+const VoiceResponse = twilio.twiml.VoiceResponse;
 
 const getWebhookUrl = () => {
-  // Prioritize VERCEL_URL for production
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}/api/webhooks/twilio/voice`;
   }
-  // Use NEXT_PUBLIC_URL for development (ngrok)
   return `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/voice`;
 };
 
 export async function POST(req: Request) {
   try {
-    logger.info('Received Twilio voice webhook', { 
-      environment: process.env.NODE_ENV,
-      webhookUrl: getWebhookUrl()
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: 'haloweaveinsights@gmail.com',
+        role: 'ADMIN'
+      }
     });
-
-    const body = await req.formData();
-    const payload = Object.fromEntries(body.entries());
-    const twilioSignature = req.headers.get('x-twilio-signature') || '';
     
-    // Validate the request is from Twilio
-    const webhookUrl = getWebhookUrl();
-    
-    const isValid = validateRequest(
-      process.env.TWILIO_AUTH_TOKEN!,
-      twilioSignature,
-      webhookUrl,
-      payload
-    );
-
-    if (!isValid) {
-      logger.error('Invalid Twilio signature', {
-        signature: twilioSignature,
-        url: webhookUrl
-      });
-      
-      return new Response('Invalid signature', { 
-        status: 403,
-        headers: { 'Content-Type': 'text/plain' }
-      });
+    if (!user) {
+      throw new Error('Admin user not found');
     }
 
-    const communication = await handleIncomingCall(payload as unknown as TwilioCallWebhookPayload);
+    const twiml = new VoiceResponse();
     
-    // Generate TwiML with dynamic webhook URLs
-    const recordingWebhook = `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/voice/recording`;
-    const transcriptionWebhook = `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/voice/transcription`;
+    // Add greeting
+    twiml.say('Thanks for calling Senate insights. Please leave your message after the tone.');
     
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-      <Response>
-        <Say>This call is being recorded for quality assurance. Please state your message after the beep.</Say>
-        <Record
-          action="${recordingWebhook}"
-          transcribe="true"
-          transcribeCallback="${transcriptionWebhook}"
-          maxLength="300"
-          timeout="5"
-          playBeep="true"
-        />
-        <Say>Thank you for your message. Goodbye.</Say>
-      </Response>`;
-    
-    logger.info('Successfully processed voice webhook', {
-      communicationId: communication.id,
-      recordingWebhook,
-      transcriptionWebhook
+    // Set up recording with transcription
+    twiml.record({
+      action: `${getWebhookUrl()}/recording`,
+      transcribe: true,
+      transcribeCallback: `${getWebhookUrl()}/transcription`,
+      maxLength: 120,
+      timeout: 5,
+      playBeep: true
     });
 
-    return new Response(twiml, {
+    return new Response(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml' }
     });
   } catch (error) {
-    logger.error('Voice webhook error:', error);
-    
-    // Return a graceful TwiML response even in case of error
-    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
-      <Response>
-        <Say>We apologize, but we are unable to process your call at this time. Please try again later.</Say>
-      </Response>`;
+    console.error('Voice webhook error:', error);
+    const twiml = new VoiceResponse();
+    twiml.say('We apologize, but we are unable to process your call at this time. Please try again later.');
 
-    return new Response(errorTwiml, {
+    return new Response(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml' }
     });
   }

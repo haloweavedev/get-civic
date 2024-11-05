@@ -48,12 +48,15 @@ export function CommunicationsDashboard() {
   const { data: response, isLoading, refetch } = useQuery<CommunicationsResponse>({
     queryKey: ['communications', activeTab],
     queryFn: async () => {
-      // Modify the query parameters based on the active tab
       const params = new URLSearchParams();
-      if (activeTab !== 'all') {
-        params.append('type', activeTab);
+      if (activeTab === 'sms' || activeTab === 'call') {
+        params.append('type', activeTab.toUpperCase());
+        params.append('metadata.source', 'TWILIO');
+      } else if (activeTab === 'email') {
+        params.append('type', 'EMAIL');
+        params.append('metadata.source', 'GMAIL');
       }
-
+  
       const response = await fetch(`/api/communications?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch communications');

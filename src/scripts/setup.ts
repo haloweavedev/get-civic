@@ -1,8 +1,9 @@
-import { prisma } from '../lib/prisma';
+// src/scripts/setup.ts
+import { prisma } from '@/lib/prisma';
 
 async function setup() {
   try {
-    // Create default user
+    // Create default admin user
     const user = await prisma.user.upsert({
       where: {
         email: 'haloweaveinsights@gmail.com'
@@ -13,52 +14,13 @@ async function setup() {
       create: {
         email: 'haloweaveinsights@gmail.com',
         role: 'ADMIN',
-        name: 'Senate Insights Admin'
+        name: 'Senate Insights Admin',
+        settings: {}
       }
     });
 
-    console.log('Created/Updated default user:', user);
+    console.log('Created/Updated admin user:', user);
 
-    // Create default organization
-    const organization = await prisma.organization.upsert({
-      where: {
-        id: 'default-org'
-      },
-      update: {
-        name: 'Senate Insights Organization',
-        members: {
-          upsert: {
-            where: {
-              organizationId_userId: {
-                organizationId: 'default-org',
-                userId: user.id
-              }
-            },
-            update: {
-              role: 'OWNER'
-            },
-            create: {
-              userId: user.id,
-              role: 'OWNER'
-            }
-          }
-        }
-      },
-      create: {
-        id: 'default-org',
-        name: 'Senate Insights Organization',
-        members: {
-          create: {
-            userId: user.id,
-            role: 'OWNER'
-          }
-        }
-      }
-    });
-
-    console.log('Created/Updated default organization:', organization);
-
-    console.log('Setup completed successfully');
   } catch (error) {
     console.error('Setup failed:', error);
   } finally {

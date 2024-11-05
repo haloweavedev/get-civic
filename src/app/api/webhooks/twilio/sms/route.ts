@@ -1,93 +1,135 @@
 // src/app/api/webhooks/twilio/sms/route.ts
+import twilio from 'twilio';
+import { prisma } from '@/lib/prisma';
+import { AIAnalysisService } from '@/lib/services/ai-analysis';
 import { NextResponse } from 'next/server';
-import { twilioProcessor } from '@/lib/integrations/twilio/handlers/processor';
-import { logger } from '@/lib/integrations/utils';
-import { TwilioSMSWebhookPayload } from '@/lib/integrations/twilio/types';
+import { openai } from '@/lib/openai';
+import { TWILIO_RESPONSE_PROMPT } from '@/lib/services/twilio/prompts';
 
-const getWebhookUrl = () => {
-  return process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}/api/webhooks/twilio/sms`
-    : `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/sms`;
-};
+const MessagingResponse = twilio.twiml.MessagingResponse;
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-export async function POST(req: Request) {
+export const POST = async (req: Request) => {
   try {
-    const webhookUrl = getWebhookUrl();
-    logger.info('Received SMS webhook', { 
-      environment: process.env.NODE_ENV,
-      webhookUrl 
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: 'haloweaveinsights@gmail.com',
+        role: 'ADMIN'
+      }
     });
-
-    // Validate webhook signature
-    const isValid = await twilioProcessor.validateWebhook(req.clone(), webhookUrl);
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+    
+    if (!user) {
+      throw new Error('Admin user not found');
     }
 
-    // Process webhook payload
     const body = await req.formData();
-    const payload = Object.fromEntries(body.entries()) as TwilioSMSWebhookPayload;
+    const payload = Object.fromEntries(body.entries());
+    const { Body, From, MessageSid, To } = payload as any;
 
-    logger.info('Processing SMS webhook', {
-      source: 'TWILIO',
-      action: 'process_sms',
-      details: {
-        from: payload.From,
-        to: payload.To,
-        body: payload.Body,
-      },
-    });
-
-    // Save the SMS content to the database
+    // Store incoming communication
     const communication = await prisma.communication.create({
       data: {
         type: 'SMS',
+        sourceId: MessageSid,
         direction: 'INBOUND',
-        rawContent: payload.Body,
-        processedContent: payload.Body,
+        subject: 'SMS Message',
+        from: From,
+        content: Body || '',
         metadata: {
           source: 'TWILIO',
-          sourceId: payload.MessageSid,
-          from: payload.From,
-          to: payload.To,
+          to: To,
+          timestamp: new Date().toISOString()
         },
-        sourceId: payload.MessageSid,
-        source: 'TWILIO',
-        status: 'PROCESSED',
-        participants: [payload.From, payload.To],
-        userId: 'default-user-id', // Replace with actual user ID logic
-      },
+        status: 'PENDING',
+        userId: user.id
+      }
     });
 
-    // Run AI analysis on the message body
-    await runAIAnalysis(communication.id, payload.Body);
+    // Send immediate acknowledgment
+    const twiml = new MessagingResponse();
+    twiml.message('Thank you for your message. We are processing it and will respond shortly.');
 
-    // Optional: Send an automatic reply
-    const twiml = `
-      <Response>
-        <Message>Your message has been received. Thank you!</Message>
-      </Response>
-    `;
-    return new Response(twiml, {
-      headers: { 'Content-Type': 'text/xml' },
+    // Process AI response in background
+    processAIResponseAndSend(Body, From, To, communication.id).catch(console.error);
+
+    return new NextResponse(twiml.toString(), {
+      headers: {
+        'Content-Type': 'text/xml'
+      }
     });
   } catch (error) {
-    const integrationError = handleIntegrationError(error, 'TWILIO', 'sms_webhook');
-    logger.error('Error processing SMS webhook', integrationError, {
-      source: 'TWILIO',
-      action: 'sms_webhook_error',
-    });
-
-    // Respond with an empty TwiML to Twilio
-    const twiml = `<Response></Response>`;
-    return new Response(twiml, {
-      headers: { 'Content-Type': 'text/xml' },
+    console.error('Twilio webhook error:', error);
+    const twiml = new MessagingResponse();
+    twiml.message('We encountered an issue. Please try again later.');
+    
+    return new NextResponse(twiml.toString(), {
+      headers: {
+        'Content-Type': 'text/xml'
+      }
     });
   }
-}
+};
 
-// Placeholder for AI analysis function
-async function runAIAnalysis(messageId: string, messageBody: string) {
-  // Implement your AI analysis logic here
-  logger.info('Running AI analysis on SMS', { messageId, messageBody });
+async function processAIResponseAndSend(
+  messageBody: string,
+  fromNumber: string,
+  toNumber: string,
+  communicationId: string
+) {
+  try {
+    // Run analysis first
+    await AIAnalysisService.analyzeCommunication(communicationId);
+
+    // Generate AI response
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: TWILIO_RESPONSE_PROMPT
+        },
+        {
+          role: "user",
+          content: messageBody
+        }
+      ],
+      max_tokens: 100,
+      temperature: 0.7
+    });
+
+    const aiResponse = completion.choices[0].message.content?.trim();
+    if (!aiResponse) return;
+
+    // Send AI response as a new message
+    await twilioClient.messages.create({
+      body: aiResponse,
+      from: toNumber,
+      to: fromNumber
+    });
+
+    console.log('Sent AI response:', aiResponse);
+
+    // Store outbound communication
+    await prisma.communication.create({
+      data: {
+        type: 'SMS',
+        sourceId: `ai-response-${communicationId}`,
+        direction: 'OUTBOUND',
+        subject: 'AI Response',
+        from: toNumber,
+        content: aiResponse,
+        metadata: {
+          source: 'TWILIO',
+          to: fromNumber,
+          timestamp: new Date().toISOString(),
+          originalMessageId: communicationId
+        },
+        status: 'PROCESSED',
+        userId: 'user_2oJI9IaKIpeRiMh8bSdFMhYWuKg' // Use your admin user ID
+      }
+    });
+
+  } catch (error) {
+    console.error('Failed to process AI response:', error);
+  }
 }

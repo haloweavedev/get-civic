@@ -22,9 +22,15 @@ export async function GET(request: Request) {
       userId,
     };
 
-    // Only add type filter if specific type is requested
-    if (type && type !== 'all') {
+    if (type) {
       where.type = type;
+    }
+
+    if (source) {
+      where.metadata = {
+        path: ['source'],
+        equals: source
+      };
     }
 
     // Only add source filter if specified

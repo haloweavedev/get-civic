@@ -17,10 +17,14 @@ interface CommunicationStats {
 }
 
 async function fetchCommunicationStats(): Promise<CommunicationStats> {
-  const emailResponse = await fetch('/api/communications?source=GMAIL&type=EMAIL');
+  const emailResponse = await fetch(
+    '/api/communications?metadata.source=GMAIL&type=EMAIL'
+  );
   const emailData = await emailResponse.json();
   
-  const twilioResponse = await fetch('/api/communications?source=TWILIO');
+  const twilioResponse = await fetch(
+    '/api/communications?metadata.source=TWILIO'
+  );
   const twilioData = await twilioResponse.json();
 
   if (!emailData.success || !twilioData.success) {

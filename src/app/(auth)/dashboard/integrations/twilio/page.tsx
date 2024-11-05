@@ -19,7 +19,10 @@ export default async function TwilioSetupPage() {
     by: ['type'],
     where: {
       userId,
-      source: 'TWILIO',
+      metadata: {
+        path: ['source'],
+        equals: 'TWILIO'
+      },
       type: {
         in: ['CALL', 'SMS']
       }

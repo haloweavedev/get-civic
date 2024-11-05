@@ -16,6 +16,20 @@ export default async function InsightsPage() {
   const communications = await prisma.communication.findMany({
     where: {
       userId,
+      OR: [
+        {
+          metadata: {
+            path: ['source'],
+            equals: 'GMAIL'
+          }
+        },
+        {
+          metadata: {
+            path: ['source'],
+            equals: 'TWILIO'
+          }
+        }
+      ]
     },
     include: {
       analysis: true,
