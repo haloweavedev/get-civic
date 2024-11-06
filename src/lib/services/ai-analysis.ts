@@ -1,22 +1,22 @@
-// src/lib/services/ai-analysis.ts
-
 import { openai } from '@/lib/openai';
 import { prisma } from '@/lib/prisma';
-import { CommunicationType } from '@prisma/client';
 
-const ANALYSIS_PROMPT = `Analyze this constituent communication and provide a structured analysis. Consider the content, context, and implications. Output must be valid JSON matching this exact structure:
+const ANALYSIS_PROMPT = `As a United States Senator's office, analyze this constituent communication with careful attention to actual sentiment, true urgency, and policy implications. Structure your analysis as valid JSON matching this format:
+
 {
   "sentiment": {
-    "score": number, // -1 to 1
-    "label": string  // "negative", "neutral", or "positive"
+    "score": number (-1 to 1),
+    "label": "negative" | "neutral" | "positive",
+    "reasoning": string  // Brief explanation of sentiment assessment
   },
   "categories": {
-    "primary": string,    // Main policy area
-    "secondary": string[] // Related policy areas
+    "primary": string,   // Main policy area
+    "secondary": string[], // Related policy areas
+    "reasoning": string  // Why these categories were chosen
   },
   "priority": {
-    "score": number,     // 1 to 5
-    "reasons": string[]  // Why this score was given
+    "score": number (1-5),
+    "reasoning": string  // Explanation of priority score
   },
   "entities": {
     "locations": string[],
@@ -24,19 +24,61 @@ const ANALYSIS_PROMPT = `Analyze this constituent communication and provide a st
     "people": string[],
     "issues": string[]
   },
-  "intentions": string[], // e.g., "request_action", "express_concern"
-  "summary": string,     // 2-3 sentence summary
-  "key_points": string[] // Main points from the message
+  "intentions": string[],
+  "summary": string
 }
 
-Priority Scoring Guide:
-5: Urgent humanitarian/life-threatening issues
-4: Immediate policy concerns affecting many people
-3: Community-wide issues needing attention
-2: Individual concerns or requests
-1: General feedback or inquiries
+Priority Scoring Guidelines (1-5):
+5 - CRITICAL URGENCY
+- Immediate threats to life/safety
+- Active crises within our state
+- Critical infrastructure failures
+- Imminent public health emergencies
+- Time-sensitive legislative matters
 
-Focus on factual analysis and avoid any political bias.`;
+4 - HIGH PRIORITY
+- State-wide policy impacts
+- Significant community impacts
+- Economic emergencies
+- Healthcare access issues
+- Housing crises
+
+3 - MODERATE PRIORITY
+- Local community concerns
+- Infrastructure improvements
+- Educational issues
+- Environmental concerns
+- Healthcare policy feedback
+
+2 - ROUTINE PRIORITY
+- Policy feedback
+- General suggestions
+- Program inquiries
+- Service requests
+- Infrastructure maintenance
+
+1 - LOW PRIORITY
+- General comments
+- Thank you messages
+- International issues
+- Out-of-state matters
+- Non-urgent feedback
+
+Sentiment Analysis Guidelines:
+- "Positive": Expressions of gratitude, support, or praise
+- "Neutral": Factual inquiries, balanced feedback
+- "Negative": Concerns, complaints, or urgent issues requiring attention
+- Do not let polite language override actual sentiment
+- Focus on the core message, not the tone
+
+IMPORTANT:
+- Prioritize constituent safety and well-being above all
+- Consider immediate vs. long-term impacts
+- Weight local/state issues higher than national/international
+- Consider number of constituents affected
+- Evaluate time sensitivity of the issue
+- Account for vulnerable populations impacted
+- Consider legislative relevance and timing`;
 
 export type AnalysisResult = {
   sentiment: {
