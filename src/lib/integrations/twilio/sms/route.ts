@@ -1,59 +1,91 @@
-// src/app/api/webhooks/twilio/sms/route.ts
+// src/lib/integrations/twilio/sms/route.ts
 
 import { NextResponse } from 'next/server';
-import { twilioProcessor } from '@/lib/integrations/twilio/handlers/processor';
-import { logger, handleIntegrationError } from '@/lib/integrations/utils';
-import type { TwilioSMSWebhookPayload } from '@/lib/integrations/twilio/types';
+import twilio from 'twilio';
+import { prisma } from '@/lib/prisma';
+import { validateRequest } from 'twilio';
+import { logger } from '@/lib/integrations/utils';
+
+const MessagingResponse = twilio.twiml.MessagingResponse;
+
+// Helper to get the stable production URL
+const getBaseUrl = () => {
+  return process.env.NEXT_PUBLIC_URL || 'https://senate-insights.vercel.app';
+};
 
 export async function POST(req: Request) {
-  logger.info('Received Twilio SMS webhook', { source: 'TWILIO', action: 'sms_webhook' });
-
   try {
-    const url = `${process.env.NEXT_PUBLIC_URL}/api/webhooks/twilio/sms`;
+    // Validate Twilio signature
+    const signature = req.headers.get('x-twilio-signature') || '';
+    const baseUrl = getBaseUrl();
+    const webhookUrl = `${baseUrl}/api/webhooks/twilio/sms`;
 
-    // Validate webhook
-    const isValid = await twilioProcessor.validateWebhook(req.clone(), url);
+    const body = await req.formData();
+    const params = Object.fromEntries(body.entries());
+
+    // Validate the request
+    const isValid = validateRequest(
+      process.env.TWILIO_AUTH_TOKEN!,
+      signature,
+      webhookUrl,
+      params as Record<string, string>
+    );
+
     if (!isValid) {
-      logger.error('Invalid Twilio signature', new Error('Signature validation failed'), {
-        source: 'TWILIO',
-        action: 'webhook_validation',
+      logger.error('Invalid Twilio signature', {
+        url: webhookUrl,
+        signature
       });
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+      return new Response('Invalid signature', { status: 403 });
     }
 
-    // Process webhook payload
-    const body = await req.formData();
-    const payload = Object.fromEntries(body.entries());
+    // Get admin user
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: 'haloweaveinsights@gmail.com',
+        role: 'ADMIN'
+      }
+    });
+    
+    if (!user) {
+      throw new Error('Admin user not found');
+    }
 
-    logger.info('Processing SMS webhook', {
-      source: 'TWILIO',
-      action: 'process_sms',
-      details: {
-        from: payload.From,
-        to: payload.To,
-        hasMedia: payload.NumMedia !== '0',
-      },
+    const { Body, From, MessageSid, To } = params as any;
+
+    // Store incoming communication
+    const communication = await prisma.communication.create({
+      data: {
+        type: 'SMS',
+        sourceId: MessageSid,
+        direction: 'INBOUND',
+        subject: 'SMS Message',
+        from: From,
+        content: Body || '',
+        metadata: {
+          source: 'TWILIO',
+          to: To,
+          timestamp: new Date().toISOString()
+        },
+        status: 'PENDING',
+        userId: user.id
+      }
     });
 
-    const communication = await twilioProcessor.processIncoming(
-      payload as TwilioSMSWebhookPayload
-    );
+    // Generate TwiML response
+    const twiml = new MessagingResponse();
+    twiml.message('Thank you for your message. We have received it and will review it promptly.');
 
-    return NextResponse.json({
-      success: true,
-      id: communication.id,
-      status: communication.status,
+    return new Response(twiml.toString(), {
+      headers: { 'Content-Type': 'text/xml' }
     });
   } catch (error) {
-    const integrationError = handleIntegrationError(error, 'TWILIO', 'sms_webhook');
-
-    return NextResponse.json(
-      {
-        error: integrationError.message,
-        code: integrationError.code,
-        details: integrationError.details,
-      },
-      { status: integrationError.status || 500 }
-    );
+    logger.error('SMS webhook error:', error);
+    const twiml = new MessagingResponse();
+    twiml.message('We encountered an issue processing your message. Please try again later.');
+    
+    return new Response(twiml.toString(), {
+      headers: { 'Content-Type': 'text/xml' }
+    });
   }
 }

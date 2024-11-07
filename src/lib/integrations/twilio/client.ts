@@ -17,7 +17,23 @@ export class TwilioClient {
       );
     }
 
-    this.client = twilio(accountSid, authToken);
+    console.log('Initializing Twilio client with:', { 
+      accountSid: accountSid.substring(0, 6) + '...',  // Log only first 6 chars for security
+      hasAuthToken: !!authToken
+    });
+
+    try {
+      // Using API Key (SK) based authentication
+      this.client = twilio(accountSid, authToken, {
+        lazyLoading: true,  // Add this to prevent immediate validation
+        accountSid: 'AC' + accountSid.substring(2)  // Convert SK to AC format
+      });
+
+      console.log('Twilio client initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Twilio client:', error);
+      throw error;
+    }
   }
 
   public static getInstance(): TwilioClient {
