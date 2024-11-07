@@ -1,16 +1,36 @@
+// next.config.mjs
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
     ignoreBuildErrors: true,
   },
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-}
+  // Add headers configuration
+  async headers() {
+    return [
+      {
+        // Match all API routes
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'X-Twilio-Signature, Content-Type',
+          },
+        ],
+      },
+    ];
+  },
+};
 
 export default nextConfig;
