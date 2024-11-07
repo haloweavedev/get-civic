@@ -48,22 +48,22 @@ model OrganizationMember {
 }
 
 model Communication {
-  id               String           @id @default(cuid())
-  type             CommunicationType
-  sourceId         String           // Gmail message ID
-  direction        Direction        @default(INBOUND)
-  subject          String
-  from             String
-  content          String           // Email body
-  metadata         Json             // Additional metadata if needed
-  status           ProcessingStatus @default(PENDING)
-  userId           String
-  organizationId   String?          // Optional organization relationship
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  user             User             @relation(fields: [userId], references: [id])
-  organization     Organization?    @relation(fields: [organizationId], references: [id])
-  analysis         Analysis?        // One-to-one relation with Analysis
+  id             String           @id @default(cuid())
+  type           CommunicationType
+  sourceId       String
+  direction      Direction        @default(INBOUND)
+  subject        String
+  from           String
+  content        String           // Will contain transcription for calls
+  metadata       Json             // For storing recording/transcription metadata
+  status         ProcessingStatus @default(PENDING)
+  userId         String
+  organizationId String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id])
+  organization   Organization?    @relation(fields: [organizationId], references: [id])
+  analysis       Analysis?        // One-to-one relation with Analysis
 
   @@unique([sourceId, userId])
   @@index([createdAt])

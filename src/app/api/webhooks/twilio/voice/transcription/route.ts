@@ -6,51 +6,50 @@ import { logger } from '@/lib/integrations/utils';
 export async function POST(req: Request) {
   try {
     const body = await req.formData();
-    const payload = Object.fromEntries(body.entries());
-
     const {
       CallSid,
       RecordingSid,
       TranscriptionText,
-      From,
-      To,
-    } = payload as any;
+      From
+    } = Object.fromEntries(body.entries()) as any;
 
     logger.info('Transcription received', {
       CallSid,
       RecordingSid,
-      TranscriptionText,
+      from: From
     });
 
-    // Update the communication record with the transcription
-    await prisma.communication.updateMany({
+    // Find existing communication
+    const communication = await prisma.communication.findFirst({
       where: {
         sourceId: CallSid,
-        'metadata.recordingSid': RecordingSid,
-      },
-      data: {
-        processedContent: TranscriptionText,
-        status: 'PROCESSED',
-      },
+        type: 'CALL'
+      }
     });
 
-    // Run AI analysis on the transcript
-    // (Assuming you have a function `runAIAnalysis`)
-    await runAIAnalysis(CallSid, TranscriptionText);
+    if (communication) {
+      await prisma.communication.update({
+        where: { id: communication.id },
+        data: {
+          content: TranscriptionText || '',
+          metadata: {
+            ...communication.metadata,
+            transcriptionStatus: 'completed',
+            transcribedAt: new Date().toISOString()
+          },
+          status: 'PROCESSED'
+        }
+      });
 
-    // Return empty TwiML response
-    const twiml = `<Response></Response>`;
-    return new Response(twiml, {
-      headers: { 'Content-Type': 'text/xml' },
-    });
+      logger.info('Updated transcription', {
+        communicationId: communication.id,
+        transcriptionLength: TranscriptionText?.length
+      });
+    }
+
+    return new Response('', { status: 200 });
   } catch (error) {
-    logger.error('Error handling transcription', error);
+    logger.error('Transcription webhook error:', error);
     return new Response('Error processing transcription', { status: 500 });
   }
-}
-
-// Placeholder for AI analysis function
-async function runAIAnalysis(callSid: string, transcript: string) {
-  // Implement your AI analysis logic here
-  logger.info('Running AI analysis', { callSid, transcript });
 }

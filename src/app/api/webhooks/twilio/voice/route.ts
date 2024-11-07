@@ -1,17 +1,14 @@
 // src/app/api/webhooks/twilio/voice/route.ts
 
-import { NextResponse } from 'next/server';
 import twilio from 'twilio';
-import { validateRequest } from 'twilio';
 import { logger } from '@/lib/integrations/utils';
+import { prisma } from '@/lib/prisma';
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-// Helper to get the exact URL Twilio is calling
-const getWebhookUrl = (req: Request) => {
-  // Get the actual URL Twilio called
-  const url = new URL(req.url);
-  return `${url.protocol}//${url.host}${url.pathname}`;
+// Helper to get the stable production URL
+const getBaseUrl = () => {
+  return process.env.NEXT_PUBLIC_URL || 'https://senate-insights.vercel.app';
 };
 
 export async function POST(req: Request) {
@@ -20,15 +17,11 @@ export async function POST(req: Request) {
     const body = await req.formData();
     const params = Object.fromEntries(body.entries());
 
-    // Get Twilio signature from headers
-    const twilioSignature = req.headers.get('x-twilio-signature') || '';
-    
-    // Get the exact URL that was called
-    const webhookUrl = getWebhookUrl(req);
+    const url = new URL(req.url);
+    const webhookUrl = `${url.protocol}//${url.host}${url.pathname}`;
 
     logger.info('Processing voice webhook', {
       webhookUrl,
-      twilioSignature,
       params: {
         CallSid: params.CallSid,
         From: params.From,
@@ -36,27 +29,39 @@ export async function POST(req: Request) {
       }
     });
 
-    // Validate with the exact URL that was called
-    const isValid = validateRequest(
-      process.env.TWILIO_AUTH_TOKEN!,
-      twilioSignature,
-      webhookUrl,
-      params as Record<string, string>
-    );
-
-    if (!isValid && process.env.NODE_ENV === 'production') {
-      logger.error('Invalid Twilio signature', {
-        webhookUrl,
-        signature: twilioSignature,
-        headers: Object.fromEntries(req.headers)
-      });
-      return new Response('Invalid signature', { status: 403 });
+    // Find or create user
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: 'haloweaveinsights@gmail.com',
+        role: 'ADMIN'
+      }
+    });
+    
+    if (!user) {
+      throw new Error('Admin user not found');
     }
 
-    const twiml = new VoiceResponse();
+    // Create initial communication record
+    await prisma.communication.create({
+      data: {
+        type: 'CALL',
+        sourceId: params.CallSid,
+        direction: 'INBOUND',
+        subject: 'Voice Call',
+        from: params.From || '',
+        content: '',
+        metadata: {
+          source: 'TWILIO',
+          callStatus: params.CallStatus,
+          timestamp: new Date().toISOString()
+        },
+        status: 'PENDING',
+        userId: user.id
+      }
+    });
 
-    // Get the absolute base URL for callbacks
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://senate-insights.vercel.app';
+    const twiml = new VoiceResponse();
+    const baseUrl = getBaseUrl();
     
     // Professional greeting
     twiml.say({
@@ -66,33 +71,28 @@ export async function POST(req: Request) {
     
     // Set up recording
     twiml.record({
-      action: `${baseUrl}/api/webhooks/twilio/voice/recording`,
-      recordingStatusCallback: `${baseUrl}/api/webhooks/twilio/voice/recording-status`,
       transcribe: true,
-      transcribeCallback: `${baseUrl}/api/webhooks/twilio/voice/transcription`,
       maxLength: 120,
       timeout: 5,
       playBeep: true,
-      recordingStatusCallbackEvent: ['completed', 'failed']
+      recordingStatusCallback: `${baseUrl}/api/webhooks/twilio/voice/recording-status`,
+      transcribeCallback: `${baseUrl}/api/webhooks/twilio/voice/transcription`,
+      recordingStatusCallbackEvent: ['completed', 'failed'],
+      trim: 'trim-silence'
     });
 
+    // Goodbye message
     twiml.say({
       voice: 'Polly.Amy-Neural',
       language: 'en-US'
     }, 'Thank you for your message. We will review it and get back to you if needed.');
 
-    // Return proper TwiML response
-    const response = new Response(twiml.toString(), {
+    // Return TwiML response
+    return new Response(twiml.toString(), {
       headers: {
         'Content-Type': 'text/xml'
       }
     });
-
-    logger.info('Voice TwiML generated successfully', {
-      CallSid: params.CallSid
-    });
-
-    return response;
 
   } catch (error) {
     logger.error('Voice webhook error:', error);
