@@ -116,6 +116,18 @@ Priority Scoring Guidelines (1-5):
 - Out-of-state matters
 - Non-urgent feedback`;
 
+const SENTIMENT_ANALYSIS_GUIDELINES = `
+Sentiment Analysis Guidelines:
+- Assess the constituent's emotional tone and attitude towards the issues discussed.
+- Positive sentiment indicates satisfaction, approval, gratitude, or optimism about the current state of affairs.
+- Negative sentiment indicates dissatisfaction, disapproval, concern, anger, frustration, or pessimism about the current state of affairs.
+- Neutral sentiment indicates a lack of strong emotional expression, or a balanced view.
+- Consider both explicit statements and implied emotions.
+- Provide reasoning that cites specific language or phrases from the communication that support the sentiment label.
+- Do not assume positive sentiment due to polite or formal language.
+- Focus on the constituent's feelings towards the issues, not on their manner of expression.
+`;
+
 const TYPE_SPECIFIC_PROMPTS = {
   CALL: `Analyze this call transcript with particular attention to:
 - Urgency and emotion in voice transcription
@@ -189,7 +201,7 @@ const ANALYSIS_SCHEMA = {
 };
 
 const getAnalysisPrompt = (type: 'CALL' | 'EMAIL' | 'SMS' | string) => `
-As a United States Senator's office analyst, analyze this constituent ${type.toLowerCase()}. 
+As a United States Senator's office analyst, analyze this constituent ${type.toLowerCase()}.
 Provide a structured analysis following these guidelines:
 
 ${TYPE_SPECIFIC_PROMPTS[type as keyof typeof TYPE_SPECIFIC_PROMPTS] || ''}
@@ -198,13 +210,15 @@ ${CATEGORY_GUIDELINES}
 
 ${PRIORITY_GUIDELINES}
 
+${SENTIMENT_ANALYSIS_GUIDELINES}
+
 Additional Analysis Guidelines:
-- Sentiment should reflect actual content, not just tone
-- Categories must match our standardized category system
-- Include all relevant location and entity information
-- Consider both immediate and long-term implications
-- Focus on actionable insights
-- Be specific and consistent in categorization
+- Sentiment should reflect the constituent's feelings about the issues, not the politeness of the message.
+- Categories must match our standardized category system.
+- Include all relevant location and entity information.
+- Consider both immediate and long-term implications.
+- Focus on actionable insights.
+- Be specific and consistent in categorization.
 
 The response must be a valid JSON object matching this schema:
 ${JSON.stringify(ANALYSIS_SCHEMA, null, 2)}`;
@@ -278,10 +292,20 @@ Additional Context: ${JSON.stringify(communication.metadata)}
             content: contentToAnalyze
           }
         ],
-        response_format: { type: "json_object" }
+        max_tokens: 1500,
+        temperature: 0,
       });
 
-      const analysisResult = JSON.parse(completion.choices[0].message.content || '{}') as AnalysisResult;
+      // Parse the assistant's reply
+      const assistantReply = completion.choices[0].message?.content || '';
+
+      // Use a try-catch block to parse JSON safely
+      let analysisResult: AnalysisResult;
+      try {
+        analysisResult = JSON.parse(assistantReply) as AnalysisResult;
+      } catch (parseError) {
+        throw new Error(`Failed to parse analysis result JSON: ${(parseError as Error).message}`);
+      }
 
       // Delete existing analysis if reanalyzing
       if (communication.analysis) {
