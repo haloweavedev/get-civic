@@ -1,8 +1,7 @@
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Globe, MessageCircle, Activity, Zap, Shield } from "lucide-react";
-import Image from 'next/image';
+import { MessageCircle, Activity, Zap } from "lucide-react";
 
 export default function Home() {
   return (
