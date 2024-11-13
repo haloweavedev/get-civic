@@ -58,7 +58,7 @@ export default function Home() {
                   </Button>
                 </Link>
                 <Link href="/contact" className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors duration-300">
-                  Contact Sales <span aria-hidden="true">→</span>
+                  Contact Team <span aria-hidden="true">→</span>
                 </Link>
               </SignedOut>
               <SignedIn>
@@ -154,7 +154,7 @@ export default function Home() {
                   href="/contact"
                   className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors duration-300"
                 >
-                  Contact Sales <span aria-hidden="true">→</span>
+                  Contact Team<span aria-hidden="true">→</span>
                 </Link>
               </SignedOut>
               <SignedIn>
