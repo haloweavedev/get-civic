@@ -1,5 +1,6 @@
 // src/components/dashboard/categories/communication-card.tsx
 import { formatDistanceToNow } from 'date-fns';
+import { getSentimentVariant } from './helpers';
 import { Badge } from '@/components/ui/badge';
 
 export function CommunicationCard({ communication }: { communication: any }) {
@@ -13,7 +14,7 @@ export function CommunicationCard({ communication }: { communication: any }) {
         <div className="flex gap-2">
           <Badge>{communication.type}</Badge>
           {communication.analysis?.sentiment?.label && (
-            <Badge variant={getSentimentVariant(communication.analysis.sentiment.label)}>
+            <Badge variant={getSentimentVariant(communication.analysis.sentiment.label) as "default" | "secondary" | "destructive" | "outline" | undefined}>
               {communication.analysis.sentiment.label}
             </Badge>
           )}
