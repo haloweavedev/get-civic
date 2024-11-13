@@ -83,26 +83,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="mt-32 sm:mt-40">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
-            <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-              <dt className="text-base leading-7 text-gray-600">Processing Time Reduced</dt>
-              <dd className="order-first text-3xl font-semibold tracking-tight text-gray-900">98%</dd>
-            </div>
-            <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-              <dt className="text-base leading-7 text-gray-600">Response Accuracy</dt>
-              <dd className="order-first text-3xl font-semibold tracking-tight text-gray-900">99.9%</dd>
-            </div>
-            <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-              <dt className="text-base leading-7 text-gray-600">Time to Resolution</dt>
-              <dd className="order-first text-3xl font-semibold tracking-tight text-gray-900">↓60%</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
       {/* Features Grid */}
       <div id="features" className="mx-auto max-w-7xl px-6 mt-32 sm:mt-40 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
