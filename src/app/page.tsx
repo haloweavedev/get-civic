@@ -142,68 +142,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Platform Section */}
-      <div id="platform" className="mt-32 sm:mt-40 relative">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:grid-cols-2 lg:items-center">
-            <div className="relative z-10">
-              <h2 className="text-base font-semibold leading-7 text-blue-600">
-                Advanced Technology
-              </h2>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                A platform built for scale
-              </p>
-              <p className="mt-6 text-lg leading-8 text-gray-600">
-                Leverage cutting-edge AI technology to automatically process, analyze, and respond to constituent communications across all channels.
-              </p>
-
-              <dl className="mt-10 max-w-xl space-y-8 text-base leading-7 text-gray-600 lg:max-w-none">
-                <div className="relative pl-9">
-                  <dt className="inline font-semibold text-gray-900">
-                    <Globe className="absolute left-1 top-1 h-5 w-5 text-blue-600" />
-                    Multi-channel Support
-                  </dt>
-                  <dd className="inline ml-1">
-                    Process communications from calls, SMS, and emails through a single unified platform.
-                  </dd>
-                </div>
-
-                <div className="relative pl-9">
-                  <dt className="inline font-semibold text-gray-900">
-                    <Shield className="absolute left-1 top-1 h-5 w-5 text-blue-600" />
-                    Enterprise Security
-                  </dt>
-                  <dd className="inline ml-1">
-                    Bank-grade encryption and security measures to protect sensitive constituent data.
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Platform Visual */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-64 w-64 rounded-full bg-blue-400 opacity-50 blur-3xl"></div>
-                <div className="h-64 w-64 rounded-full bg-violet-400 opacity-50 blur-3xl"></div>
-              </div>
-              <div className="relative mx-auto max-w-2xl">
-                <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur">
-                  <div className="p-8">
-                    <Image 
-                      src="/images/homepage-preview-screenshot.webp" 
-                      alt="Screenshot of homepage" 
-                      width={500} 
-                      height={500} 
-                      className="rounded-2xl shadow-2xl ring-1 ring-gray-900/10"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Call to Action */}
       <div className="mt-32 sm:mt-40 mb-24 relative">
         <div className="absolute inset-0 h-1/2"></div>
