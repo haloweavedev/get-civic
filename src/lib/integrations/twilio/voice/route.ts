@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     twiml.say({
       voice: 'Polly.Amy-Neural',
       language: 'en-US'
-    }, 'Thank you for calling Get Civic. Please leave your message after the tone.');
+    }, 'Thank you for calling Civic. Please state your location and clearly describe your concern after the tone.');
     
     // Always use the stable production URL for callbacks
     twiml.record({
