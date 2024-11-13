@@ -3,7 +3,83 @@
 import { openai } from '@/lib/openai';
 import { prisma } from '@/lib/prisma';
 
-const BASE_ANALYSIS_GUIDELINES = `
+const CATEGORY_GUIDELINES = `
+When categorizing, use these standard high-level categories and their relevant subcategories:
+
+1. PUBLIC SAFETY
+   - Law Enforcement
+   - Emergency Services
+   - Public Health Safety
+   - Infrastructure Safety
+   - Community Safety
+
+2. HEALTH & HEALTHCARE
+   - Healthcare Access
+   - Mental Health
+   - Public Health
+   - Medical Services
+   - Health Insurance
+   - Healthcare Policy
+
+3. INFRASTRUCTURE
+   - Transportation
+   - Public Works
+   - Utilities
+   - Maintenance
+   - Development
+
+4. ENVIRONMENT
+   - Climate Change
+   - Conservation
+   - Environmental Protection
+   - Pollution
+   - Sustainability
+
+5. HOUSING
+   - Affordable Housing
+   - Housing Policy
+   - Development
+   - Homelessness
+   - Housing Rights
+
+6. EDUCATION
+   - Public Education
+   - Higher Education
+   - Educational Access
+   - School Safety
+   - Education Policy
+
+7. ECONOMIC
+   - Economic Development
+   - Employment
+   - Small Business
+   - Financial Services
+   - Economic Policy
+
+8. SOCIAL SERVICES
+   - Community Services
+   - Social Programs
+   - Family Services
+   - Senior Services
+   - Disability Services
+
+9. CIVIC ADMINISTRATION
+   - Government Services
+   - Policy Implementation
+   - Administrative Issues
+   - Public Records
+   - Civic Engagement
+
+10. LEGISLATIVE MATTERS
+    - Policy Proposals
+    - Legislative Updates
+    - Legal Issues
+    - Regulatory Concerns
+    - Constituent Rights
+
+Choose the most specific and appropriate category. Maintain consistency in naming.`;
+
+const PRIORITY_GUIDELINES = `
 Priority Scoring Guidelines (1-5):
 5 - CRITICAL URGENCY
 - Immediate threats to life/safety
@@ -38,97 +114,116 @@ Priority Scoring Guidelines (1-5):
 - Thank you messages
 - International issues
 - Out-of-state matters
-- Non-urgent feedback
-
-Sentiment Analysis Guidelines:
-- "Positive": Expressions of gratitude, support, or praise
-- "Neutral": Factual inquiries, balanced feedback
-- "Negative": Concerns, complaints, or urgent issues requiring attention
-- Do not let polite language override actual sentiment
-- Focus on the core message, not the tone`;
+- Non-urgent feedback`;
 
 const TYPE_SPECIFIC_PROMPTS = {
   CALL: `Analyze this call transcript with particular attention to:
-- Urgency in voice transcription
-- Location information mentioned
+- Urgency and emotion in voice transcription
+- Specific location or jurisdiction mentioned
 - Immediate action requirements
 - Public safety implications
 - Service disruption details
-- Infrastructure issues
-- Emergency service needs`,
+- Emergency response needs`,
 
   EMAIL: `Analyze this email with particular attention to:
 - Policy proposals and implications
-- Detailed argumentation
-- Documentation and references
-- Long-term impacts
+- Supporting documentation or references
+- Long-term impact assessment
 - Legislative suggestions
-- Constituent research/background
-- Multiple issue coverage`,
+- Multiple issue coverage
+- Formal requests or demands`,
 
   SMS: `Analyze this SMS with particular attention to:
-- Immediate needs expressed
+- Immediate needs or emergencies
 - Location-specific issues
-- Service disruption reports
 - Time-sensitive matters
+- Service disruption reports
 - Quick response requirements
 - Concise issue reporting`
 };
 
+const ANALYSIS_SCHEMA = {
+  type: "object",
+  properties: {
+    sentiment: {
+      type: "object",
+      properties: {
+        score: { type: "number", minimum: -1, maximum: 1 },
+        label: { type: "string", enum: ["negative", "neutral", "positive"] },
+        reasoning: { type: "string" }
+      },
+      required: ["score", "label", "reasoning"]
+    },
+    categories: {
+      type: "object",
+      properties: {
+        primary: { type: "string" },
+        secondary: { type: "array", items: { type: "string" } },
+        reasoning: { type: "string" }
+      },
+      required: ["primary", "secondary", "reasoning"]
+    },
+    priority: {
+      type: "object",
+      properties: {
+        score: { type: "number", minimum: 1, maximum: 5 },
+        reasoning: { type: "string" },
+        timeframe: { type: "string", enum: ["immediate", "short-term", "long-term"] }
+      },
+      required: ["score", "reasoning", "timeframe"]
+    },
+    entities: {
+      type: "object",
+      properties: {
+        locations: { type: "array", items: { type: "string" } },
+        organizations: { type: "array", items: { type: "string" } },
+        people: { type: "array", items: { type: "string" } },
+        issues: { type: "array", items: { type: "string" } }
+      },
+      required: ["locations", "organizations", "people", "issues"]
+    },
+    summary: { type: "string" },
+    intentions: { type: "array", items: { type: "string" } }
+  },
+  required: ["sentiment", "categories", "priority", "entities", "summary", "intentions"]
+};
+
 const getAnalysisPrompt = (type: 'CALL' | 'EMAIL' | 'SMS' | string) => `
-As a United States Senator's office, analyze this constituent ${type.toLowerCase()} with careful attention to actual sentiment, true urgency, and policy implications. 
+As a United States Senator's office analyst, analyze this constituent ${type.toLowerCase()}. 
+Provide a structured analysis following these guidelines:
 
 ${TYPE_SPECIFIC_PROMPTS[type as keyof typeof TYPE_SPECIFIC_PROMPTS] || ''}
 
-${BASE_ANALYSIS_GUIDELINES}
+${CATEGORY_GUIDELINES}
 
-Structure your analysis as valid JSON matching this format:
-{
-  "sentiment": {
-    "score": number (-1 to 1),
-    "label": "negative" | "neutral" | "positive",
-    "reasoning": string
-  },
-  "categories": {
-    "primary": string,
-    "secondary": string[],
-    "reasoning": string
-  },
-  "priority": {
-    "score": number (1-5),
-    "reasoning": string
-  },
-  "entities": {
-    "locations": string[],
-    "organizations": string[],
-    "people": string[],
-    "issues": string[]
-  },
-  "intentions": string[],
-  "summary": string
-}
+${PRIORITY_GUIDELINES}
 
-IMPORTANT:
-- Prioritize constituent safety and well-being above all
-- Consider immediate vs. long-term impacts
-- Weight local/state issues higher than national/international
-- Consider number of constituents affected
-- Evaluate time sensitivity of the issue
-- Account for vulnerable populations impacted
-- Consider legislative relevance and timing`;
+Additional Analysis Guidelines:
+- Sentiment should reflect actual content, not just tone
+- Categories must match our standardized category system
+- Include all relevant location and entity information
+- Consider both immediate and long-term implications
+- Focus on actionable insights
+- Be specific and consistent in categorization
+
+The response must be a valid JSON object matching this schema:
+${JSON.stringify(ANALYSIS_SCHEMA, null, 2)}`;
 
 export type AnalysisResult = {
   sentiment: {
     score: number;
     label: string;
+    reasoning: string;
   };
   categories: {
     primary: string;
     secondary: string[];
+    reasoning: string;
   };
   priority: {
     score: number;
-    reasons: string[];
+    reasoning: string;
+    timeframe: 'immediate' | 'short-term' | 'long-term';
   };
   entities: {
     locations: string[];
@@ -136,29 +231,29 @@ export type AnalysisResult = {
     people: string[];
     issues: string[];
   };
-  intentions: string[];
   summary: string;
-  key_points: string[];
+  intentions: string[];
 };
 
 export class AIAnalysisService {
-  static async analyzeCommunication(communicationId: string): Promise<void> {
+  static async analyzeCommunication(communicationId: string, forceReanalysis: boolean = false): Promise<void> {
     try {
       // Get communication
       const communication = await prisma.communication.findUnique({
         where: { id: communicationId },
-        select: {
-          id: true,
-          type: true,
-          content: true,
-          subject: true,
-          from: true,
-          metadata: true,
-        },
+        include: {
+          analysis: true
+        }
       });
 
       if (!communication) {
         throw new Error(`Communication not found: ${communicationId}`);
+      }
+
+      // Skip if already analyzed and not forcing reanalysis
+      if (communication.analysis && !forceReanalysis) {
+        console.log(`Communication ${communicationId} already analyzed. Skipping.`);
+        return;
       }
 
       // Prepare content for analysis
@@ -167,9 +262,10 @@ Type: ${communication.type}
 Subject: ${communication.subject || 'N/A'}
 From: ${communication.from}
 Content: ${communication.content}
-      `.trim();
+Additional Context: ${JSON.stringify(communication.metadata)}
+`.trim();
 
-      // Get AI analysis with type-specific prompt
+      // Get AI analysis
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -187,11 +283,18 @@ Content: ${communication.content}
 
       const analysisResult = JSON.parse(completion.choices[0].message.content || '{}') as AnalysisResult;
 
+      // Delete existing analysis if reanalyzing
+      if (communication.analysis) {
+        await prisma.analysis.delete({
+          where: { id: communication.analysis.id }
+        });
+      }
+
       // Store analysis results
       await prisma.analysis.create({
         data: {
           communicationId: communication.id,
-          version: 'v1',
+          version: 'v2',
           sentiment: analysisResult.sentiment,
           summary: analysisResult.summary,
           categories: analysisResult.categories,
@@ -210,6 +313,8 @@ Content: ${communication.content}
         data: { status: 'PROCESSED' },
       });
 
+      console.log(`Successfully analyzed communication ${communicationId}`);
+
     } catch (error) {
       console.error('Analysis failed:', error);
       
@@ -223,7 +328,7 @@ Content: ${communication.content}
     }
   }
 
-  static async analyzeMultiple(communicationIds: string[]): Promise<{
+  static async analyzeMultiple(communicationIds: string[], forceReanalysis: boolean = false): Promise<{
     success: string[];
     failed: string[];
   }> {
@@ -239,7 +344,7 @@ Content: ${communication.content}
       
       // Process batch in parallel
       const promises = batch.map(id => 
-        this.analyzeCommunication(id)
+        this.analyzeCommunication(id, forceReanalysis)
           .then(() => results.success.push(id))
           .catch(() => results.failed.push(id))
       );
@@ -248,5 +353,15 @@ Content: ${communication.content}
     }
 
     return results;
+  }
+
+  static async reanalyzeAll(): Promise<void> {
+    const communications = await prisma.communication.findMany({
+      select: { id: true }
+    });
+
+    console.log(`Starting reanalysis of ${communications.length} communications...`);
+    await this.analyzeMultiple(communications.map(c => c.id), true);
+    console.log('Reanalysis complete!');
   }
 }

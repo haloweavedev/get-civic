@@ -9,6 +9,7 @@ import {
   Plug,
   BarChart,
   Code,
+  Layers,
   ChevronDown,
   ChevronRight
 } from "lucide-react";
@@ -42,6 +43,11 @@ const navigation = [
       { name: 'Gmail Setup', href: '/dashboard/integrations/gmail' },
       { name: 'Twilio Setup', href: '/dashboard/integrations/twilio' }
     ]
+  },
+  { 
+    name: 'Categories',
+    href: '/dashboard/categories',
+    icon: Layers
   },
   { 
     name: 'Insights',
