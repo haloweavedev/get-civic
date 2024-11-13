@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/integrations/utils';
+import { AIAnalysisService } from '@/lib/services/ai-analysis';
 
 export async function POST(req: Request) {
   try {
@@ -27,13 +28,22 @@ export async function POST(req: Request) {
       }
     });
 
+    // Log the received transcription and metadata
+    console.log('Transcription received:', {
+      CallSid,
+      RecordingSid,
+      TranscriptionText,
+      metadata: communication?.metadata // After DB query
+    });
+
     if (communication) {
+      // Update communication with the transcription
       await prisma.communication.update({
         where: { id: communication.id },
         data: {
           content: TranscriptionText || '',
           metadata: {
-            ...communication.metadata,
+            ...(typeof communication.metadata === 'object' ? communication.metadata : {}),
             transcriptionStatus: 'completed',
             transcribedAt: new Date().toISOString()
           },
@@ -41,7 +51,10 @@ export async function POST(req: Request) {
         }
       });
 
-      logger.info('Updated transcription', {
+      // Trigger AI analysis
+      await AIAnalysisService.analyzeCommunication(communication.id);
+
+      logger.info('Analysis completed', {
         communicationId: communication.id,
         transcriptionLength: TranscriptionText?.length
       });

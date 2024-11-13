@@ -1,33 +1,9 @@
+// src/lib/services/ai-analysis.ts
+
 import { openai } from '@/lib/openai';
 import { prisma } from '@/lib/prisma';
 
-const ANALYSIS_PROMPT = `As a United States Senator's office, analyze this constituent communication with careful attention to actual sentiment, true urgency, and policy implications. Structure your analysis as valid JSON matching this format:
-
-{
-  "sentiment": {
-    "score": number (-1 to 1),
-    "label": "negative" | "neutral" | "positive",
-    "reasoning": string  // Brief explanation of sentiment assessment
-  },
-  "categories": {
-    "primary": string,   // Main policy area
-    "secondary": string[], // Related policy areas
-    "reasoning": string  // Why these categories were chosen
-  },
-  "priority": {
-    "score": number (1-5),
-    "reasoning": string  // Explanation of priority score
-  },
-  "entities": {
-    "locations": string[],
-    "organizations": string[],
-    "people": string[],
-    "issues": string[]
-  },
-  "intentions": string[],
-  "summary": string
-}
-
+const BASE_ANALYSIS_GUIDELINES = `
 Priority Scoring Guidelines (1-5):
 5 - CRITICAL URGENCY
 - Immediate threats to life/safety
@@ -69,7 +45,68 @@ Sentiment Analysis Guidelines:
 - "Neutral": Factual inquiries, balanced feedback
 - "Negative": Concerns, complaints, or urgent issues requiring attention
 - Do not let polite language override actual sentiment
-- Focus on the core message, not the tone
+- Focus on the core message, not the tone`;
+
+const TYPE_SPECIFIC_PROMPTS = {
+  CALL: `Analyze this call transcript with particular attention to:
+- Urgency in voice transcription
+- Location information mentioned
+- Immediate action requirements
+- Public safety implications
+- Service disruption details
+- Infrastructure issues
+- Emergency service needs`,
+
+  EMAIL: `Analyze this email with particular attention to:
+- Policy proposals and implications
+- Detailed argumentation
+- Documentation and references
+- Long-term impacts
+- Legislative suggestions
+- Constituent research/background
+- Multiple issue coverage`,
+
+  SMS: `Analyze this SMS with particular attention to:
+- Immediate needs expressed
+- Location-specific issues
+- Service disruption reports
+- Time-sensitive matters
+- Quick response requirements
+- Concise issue reporting`
+};
+
+const getAnalysisPrompt = (type: 'CALL' | 'EMAIL' | 'SMS' | string) => `
+As a United States Senator's office, analyze this constituent ${type.toLowerCase()} with careful attention to actual sentiment, true urgency, and policy implications. 
+
+${TYPE_SPECIFIC_PROMPTS[type as keyof typeof TYPE_SPECIFIC_PROMPTS] || ''}
+
+${BASE_ANALYSIS_GUIDELINES}
+
+Structure your analysis as valid JSON matching this format:
+{
+  "sentiment": {
+    "score": number (-1 to 1),
+    "label": "negative" | "neutral" | "positive",
+    "reasoning": string
+  },
+  "categories": {
+    "primary": string,
+    "secondary": string[],
+    "reasoning": string
+  },
+  "priority": {
+    "score": number (1-5),
+    "reasoning": string
+  },
+  "entities": {
+    "locations": string[],
+    "organizations": string[],
+    "people": string[],
+    "issues": string[]
+  },
+  "intentions": string[],
+  "summary": string
+}
 
 IMPORTANT:
 - Prioritize constituent safety and well-being above all
@@ -126,18 +163,19 @@ export class AIAnalysisService {
 
       // Prepare content for analysis
       const contentToAnalyze = `
-Subject: ${communication.subject}
+Type: ${communication.type}
+Subject: ${communication.subject || 'N/A'}
 From: ${communication.from}
 Content: ${communication.content}
       `.trim();
 
-      // Get AI analysis
+      // Get AI analysis with type-specific prompt
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: ANALYSIS_PROMPT
+            content: getAnalysisPrompt(communication.type)
           },
           {
             role: "user",
