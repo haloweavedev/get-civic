@@ -105,7 +105,7 @@ export function ApiDashboard({ user }: ApiDashboardProps) {
             <div>
               <h3 className="font-medium mb-2">Endpoint</h3>
               <code className="bg-gray-100 p-2 rounded block">
-                GET https://senate-insights.vercel.app/api/v1/communications
+                GET https://get-civic.vercel.app/api/v1/communications
               </code>
             </div>
 

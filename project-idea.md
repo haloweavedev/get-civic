@@ -1,7 +1,7 @@
-# Senate Insights: High-Level Overview and User Flow
+# Get Civic: High-Level Overview and User Flow
 
 ## Objective
-Develop a web application, **Senate Insights**, that collects public concerns and feedback from multiple sources (Twilio for calls/SMS and Gmail for emails), processes the data, and presents it in an organized insights dashboard. This platform aims to make community feedback visible and actionable through structured data representation and analysis.
+Develop a web application, **Get Civic**, that collects public concerns and feedback from multiple sources (Twilio for calls/SMS and Gmail for emails), processes the data, and presents it in an organized insights dashboard. This platform aims to make community feedback visible and actionable through structured data representation and analysis.
 
 ---
 

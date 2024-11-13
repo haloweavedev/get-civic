@@ -170,8 +170,8 @@ TWILIO_PHONE_NUMBER=+14438430495
 - **Update Twilio Webhook URLs:**
 
   - **Production Webhooks (Vercel):**
-    - SMS: `https://senate-insights.vercel.app/api/webhooks/twilio/sms`
-    - Voice: `https://senate-insights.vercel.app/api/webhooks/twilio/voice`
+    - SMS: `https://get-civic.vercel.app/api/webhooks/twilio/sms`
+    - Voice: `https://get-civic.vercel.app/api/webhooks/twilio/voice`
 
   - **Development Webhooks (Local with ngrok):**
     - SMS: `https://<your-ngrok-subdomain>.ngrok.io/api/webhooks/twilio/sms`
@@ -213,8 +213,8 @@ TWILIO_PHONE_NUMBER=+14438430495
 
 - **Update Twilio Webhook URLs to Production:**
 
-  - SMS Webhook URL: `https://senate-insights.vercel.app/api/webhooks/twilio/sms`
-  - Voice Webhook URL: `https://senate-insights.vercel.app/api/webhooks/twilio/voice`
+  - SMS Webhook URL: `https://get-civic.vercel.app/api/webhooks/twilio/sms`
+  - Voice Webhook URL: `https://get-civic.vercel.app/api/webhooks/twilio/voice`
 
 - **Post-Deployment Checks:**
   - Monitor application logs for errors and performance issues.
@@ -249,8 +249,8 @@ TWILIO_PHONE_NUMBER=+14438430495
 ## Resources
 
 - [Twilio Console](https://console.twilio.com)
-- [Project Repository](https://github.com/yourusername/senate-insights)
-- [API Documentation](https://senate-insights.vercel.app/dashboard/api)
+- [Project Repository](https://github.com/yourusername/get-civic)
+- [API Documentation](https://get-civic.vercel.app/dashboard/api)
 - [Vercel Dashboard](https://vercel.com)
 - [ngrok Documentation](https://ngrok.com/docs)
 

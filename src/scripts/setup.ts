@@ -14,7 +14,7 @@ async function setup() {
       create: {
         email: 'haloweaveinsights@gmail.com',
         role: 'ADMIN',
-        name: 'Senate Insights Admin',
+        name: 'Get Civic Admin',
         settings: {}
       }
     });

@@ -1,11 +1,11 @@
 export const siteConfig = {
-    name: "Senate Insights",
+    name: "Get Civic",
     description: "Powerful communication analytics platform for modern businesses",
-    url: "https://senate-insights.com",
-    ogImage: "https://senate-insights.com/og.jpg",
+    url: "https://get-civic.com",
+    ogImage: "https://get-civic.com/og.jpg",
     links: {
       twitter: "https://twitter.com/senateinsights",
-      github: "https://github.com/haloweavedev/senate-insights",
+      github: "https://github.com/haloweavedev/get-civic",
     },
     creator: "Haloweave",
   }

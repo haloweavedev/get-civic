@@ -1,4 +1,4 @@
-# Senate Insights Progress Tracker - November 4th, 2024
+# Get Civic Progress Tracker - November 4th, 2024
 
 ## Today's Major Achievements 🎯
 
@@ -145,14 +145,14 @@ CLERK_SECRET_KEY="..."
 ### API Usage Example
 ```bash
 # Fetch communications with API key
-curl "https://senate-insights.vercel.app/api/v1/communications?limit=5" \
+curl "https://get-civic.vercel.app/api/v1/communications?limit=5" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Quick Start for Development
 ```bash
-git clone https://github.com/yourusername/senate-insights.git
-cd senate-insights
+git clone https://github.com/yourusername/get-civic.git
+cd get-civic
 npm install
 npm run dev
 ```
@@ -192,5 +192,5 @@ Remember to:
 
 ## Resources
 - [Vercel Dashboard](https://vercel.com)
-- [Project Repository](https://github.com/yourusername/senate-insights)
-- [API Documentation](https://senate-insights.vercel.app/dashboard/api)
+- [Project Repository](https://github.com/yourusername/get-civic)
+- [API Documentation](https://get-civic.vercel.app/dashboard/api)

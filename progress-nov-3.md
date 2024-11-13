@@ -1,7 +1,7 @@
-# Senate Insights Progress Tracker - November 3rd, 2024
+# Get Civic Progress Tracker - November 3rd, 2024
 
 ## Project Overview
-Senate Insights is evolving into a comprehensive communication analytics platform that processes and analyzes public feedback through multiple channels:
+Get Civic is evolving into a comprehensive communication analytics platform that processes and analyzes public feedback through multiple channels:
 1. **Voice/SMS (Twilio)**: Successfully tested voice call functionality
 2. **Email (Gmail API)**: Implemented OAuth flow and email syncing
 3. **Analytics Engine**: Planning phase for AI-powered analysis
@@ -223,7 +223,7 @@ OPENAI_API_KEY="..."
 - [Twilio Dashboard](https://console.twilio.com)
 - [Gmail API Console](https://console.cloud.google.com)
 - [OpenAI Documentation](https://platform.openai.com/docs)
-- [Project Repository](https://github.com/yourusername/senate-insights)
+- [Project Repository](https://github.com/yourusername/get-civic)
 
 ## Team Notes
 Remember to:

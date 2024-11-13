@@ -1,7 +1,7 @@
-# Senate Insights Progress Tracker - November 1st, 2024
+# Get Civic Progress Tracker - November 1st, 2024
 
 ## Project Overview
-Senate Insights is a communication analytics platform with two main components:
+Get Civic is a communication analytics platform with two main components:
 1. **Public API Service**: A serverless API for communication data analysis
 2. **Analytics Dashboard**: A showcase platform demonstrating our API capabilities
 

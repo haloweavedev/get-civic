@@ -10,7 +10,7 @@ const MessagingResponse = twilio.twiml.MessagingResponse;
 
 // Helper to get the stable production URL
 const getBaseUrl = () => {
-  return process.env.NEXT_PUBLIC_URL || 'https://senate-insights.vercel.app';
+  return process.env.NEXT_PUBLIC_URL || 'https://get-civic.vercel.app';
 };
 
 export async function POST(req: Request) {

@@ -124,7 +124,7 @@ export default function DashboardLayout({
                 <SheetContent side="left" className="w-72 p-0">
                   <div className="flex h-16 shrink-0 items-center px-6">
                     <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-                      Senate Insights
+                      Get Civic
                     </Link>
                   </div>
                   <nav className="flex flex-col gap-1 px-3 py-4">
@@ -135,7 +135,7 @@ export default function DashboardLayout({
                 </SheetContent>
               </Sheet>
               <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-                Senate Insights
+                Get Civic
               </Link>
             </div>
             <div className="flex items-center gap-4">

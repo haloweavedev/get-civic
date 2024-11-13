@@ -1,4 +1,4 @@
-# Senate Insights Platform Documentation
+# Get Civic Platform Documentation
 
 ## Table of Contents
 - [System Overview](#system-overview)
@@ -10,7 +10,7 @@
 
 ## System Overview
 
-Senate Insights is a communication analytics platform that processes and analyzes constituent feedback through multiple channels:
+Get Civic is a communication analytics platform that processes and analyzes constituent feedback through multiple channels:
 - 📞 Voice Calls (Twilio)
 - 📱 SMS Messages (Twilio)
 - 📧 Email Communications (Gmail)
@@ -19,7 +19,7 @@ Senate Insights is a communication analytics platform that processes and analyze
 graph TD
     A[Constituent] -->|Calls/SMS| B[Twilio]
     A -->|Emails| C[Gmail API]
-    B -->|Webhooks| D[Senate Insights API]
+    B -->|Webhooks| D[Get Civic API]
     C -->|OAuth| D
     D -->|Process| E[Database]
     D -->|Analyze| F[OpenAI]
@@ -31,7 +31,7 @@ graph TD
 
 ### Directory Structure
 ```
-senate-insights/
+get-civic/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/
@@ -158,7 +158,7 @@ sequenceDiagram
 
 ### Public API Endpoints
 ```typescript
-// Base URL: https://senate-insights.vercel.app/api/v1
+// Base URL: https://get-civic.vercel.app/api/v1
 
 // Communications
 GET  /communications
@@ -185,7 +185,7 @@ POST /webhooks/gmail
 ### Environment Setup
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/senate-insights.git
+git clone https://github.com/yourusername/get-civic.git
 
 # Install dependencies
 npm install
@@ -240,5 +240,5 @@ CLERK_SECRET_KEY="..."
 vercel deploy
 
 # Update webhook URLs to production
-https://senate-insights.vercel.app/api/webhooks/...
+https://get-civic.vercel.app/api/webhooks/...
 ```

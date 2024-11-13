@@ -8,7 +8,7 @@ const VoiceResponse = twilio.twiml.VoiceResponse;
 
 // Helper to get the stable production URL
 const getBaseUrl = () => {
-  return process.env.NEXT_PUBLIC_URL || 'https://senate-insights.vercel.app';
+  return process.env.NEXT_PUBLIC_URL || 'https://get-civic.vercel.app';
 };
 
 export async function POST(req: Request) {
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     twiml.say({
       voice: 'Polly.Amy-Neural',
       language: 'en-US'
-    }, 'Thank you for calling Senate insights. Please leave your message after the tone.');
+    }, 'Thank you for calling Get Civic. Please leave your message after the tone.');
     
     // Set up recording
     twiml.record({

@@ -20,7 +20,7 @@ export default function Home() {
           <div className="flex h-16 items-center justify-between">
             <div className="flex-shrink-0">
               <Link href="/" className="text-2xl font-semibold text-gray-900">
-                Senate Insights
+                Get Civic
               </Link>
             </div>
             <div className="hidden md:flex md:items-center md:space-x-6">
@@ -233,7 +233,7 @@ export default function Home() {
               Ready to transform your communication?
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-600">
-              Join forward-thinking organizations using Senate Insights to streamline their constituent communications.
+              Join forward-thinking organizations using Get Civic to streamline their constituent communications.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <SignedOut>
