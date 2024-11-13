@@ -23,15 +23,6 @@ export default function Home() {
               </Link>
             </div>
             <div className="hidden md:flex md:items-center md:space-x-6">
-              <Link href="#features" className="text-sm text-gray-700 hover:text-gray-900">
-                Features
-              </Link>
-              <Link href="#security" className="text-sm text-gray-700 hover:text-gray-900">
-                Security
-              </Link>
-              <Link href="#platform" className="text-sm text-gray-700 hover:text-gray-900">
-                Platform
-              </Link>
               <SignedOut>
                 <Link href="/sign-in">
                   <Button variant="outline" className="ml-4">
