@@ -4,11 +4,8 @@ import { prisma } from '@/lib/prisma'; // Adjust the import path based on your p
 
 async function deleteCommunications() {
     const communicationIds = [
-      'cm35jqdpb0003nsyxg668jnp1',
-      'cm33vf16w00014ighpj6y9gf5',
-      'cm33w32kv00017uw7nvgzmqwz',
-      'cm36ttxxe0007wrvcrn4stby5',
-      'cm36niptq000113lflj9g8gmi',
+      'cm337z1sc0003vy6j6xvna228',
+      'cm338zcy40001l4ys1rd4i2s2',
     ];
   
     try {
