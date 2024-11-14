@@ -91,6 +91,22 @@ model Analysis {
   @@index([communicationId])
 }
 
+model StrategicAnalysis {
+  id              String        @id @default(cuid())
+  timestamp       DateTime      @default(now())
+  summary         String        @db.Text
+  criticalIssues  Json         // Stores the array of critical issues
+  recommendedActions Json      // Stores the array of recommended actions
+  monitoringPriorities Json   // Stores the array of monitoring priorities
+  newCommunicationsCount Int  @default(0)  // Counter for new communications since last analysis
+  userId          String       // Link to the user this analysis belongs to
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
 enum UserRole {
   ADMIN
   USER

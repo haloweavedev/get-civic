@@ -1,5 +1,3 @@
-// src/lib/services/insights-analysis.ts
-
 import { openai } from '../openai';
 import { prisma } from '../prisma';
 import type { StrategicAnalysis, Communication, CategoryData } from '@/types/dashboard';
@@ -44,36 +42,76 @@ Format your response EXACTLY as follows:
 Use clear, concise language appropriate for governmental communications.
 Maintain objectivity while highlighting urgent matters requiring immediate attention.`;
 
-interface AnalysisInput {
-  categories: Array<{
-    name: string;
-    count: number;
-    priority: number;
-  }>;
-  communications: Communication[];
-}
-
-interface CriticalIssue {
-  category: string;
-  description: string;
-  urgency: string;
-  affectedArea: string;
-}
-
-interface AIAnalysisResponse {
-  situationOverview: string;
-  criticalIssues: CriticalIssue[];
-  recommendedActions: string[];
-  monitoringPriorities: string[];
-}
-
 export class InsightsAnalysisService {
+  static async getLatestAnalysis(userId: string): Promise<StrategicAnalysis | null> {
+    const analysis = await prisma.strategicAnalysis.findFirst({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    return analysis ? this.formatAnalysisFromDb(analysis) : null;
+  }
+
+  static async shouldGenerateNewAnalysis(userId: string): Promise<boolean> {
+    const latestAnalysis = await prisma.strategicAnalysis.findFirst({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    if (!latestAnalysis) return true;
+
+    // Check if there have been 4 or more new communications
+    return latestAnalysis.newCommunicationsCount >= 4;
+  }
+
+  static async incrementNewCommunicationsCounter(userId: string): Promise<void> {
+    const latestAnalysis = await prisma.strategicAnalysis.findFirst({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    if (latestAnalysis) {
+      await prisma.strategicAnalysis.update({
+        where: { id: latestAnalysis.id },
+        data: {
+          newCommunicationsCount: latestAnalysis.newCommunicationsCount + 1
+        }
+      });
+    }
+  }
+
+  static async generateAndSaveAnalysis(
+    userId: string,
+    categoryData: CategoryData[],
+    recentHighPriorityCommunications: Communication[]
+  ): Promise<StrategicAnalysis> {
+    const analysis = await this.generateStrategicAnalysis(
+      categoryData,
+      recentHighPriorityCommunications
+    );
+
+    // Save to database
+    await prisma.strategicAnalysis.create({
+      data: {
+        userId,
+        timestamp: new Date(),
+        summary: analysis.summary,
+        criticalIssues: analysis.criticalIssues,
+        recommendedActions: analysis.recommendedActions,
+        monitoringPriorities: analysis.monitoringPriorities,
+        newCommunicationsCount: 0 // Reset counter
+      }
+    });
+
+    return analysis;
+  }
+
   static async generateStrategicAnalysis(
     categoryData: CategoryData[],
     recentHighPriorityCommunications: Communication[]
   ): Promise<StrategicAnalysis> {
     try {
-      const analysisInput: AnalysisInput = {
+      const analysisInput = {
         categories: categoryData.map(cat => ({
           name: cat.name,
           count: cat.count,
@@ -98,7 +136,7 @@ export class InsightsAnalysisService {
         max_tokens: 1000
       });
 
-      const analysis = JSON.parse(completion.choices[0].message?.content || '{}') as AIAnalysisResponse;
+      const analysis = JSON.parse(completion.choices[0].message?.content || '{}');
 
       // Process critical issues with actual communications data
       const criticalIssues = await this.processCriticalIssues(
@@ -125,7 +163,7 @@ export class InsightsAnalysisService {
   ) {
     return Promise.all(issues.map(async (issue) => {
       const relatedComms = communications.filter(
-        comm => comm.analysis?.categories.primary === issue.category
+        comm => comm.analysis?.categories?.primary === issue.category
       );
 
       return {
@@ -144,6 +182,16 @@ export class InsightsAnalysisService {
       comm => (comm.analysis?.priority || 0) >= 4
     ).length;
     return (highPriorityCount / category.count) * 5;
+  }
+
+  private static formatAnalysisFromDb(dbAnalysis: any): StrategicAnalysis {
+    return {
+      timestamp: dbAnalysis.timestamp,
+      summary: dbAnalysis.summary,
+      criticalIssues: dbAnalysis.criticalIssues,
+      recommendedActions: dbAnalysis.recommendedActions,
+      monitoringPriorities: dbAnalysis.monitoringPriorities,
+    };
   }
 
   static async shouldUpdateAnalysis(lastAnalysis: StrategicAnalysis | null): Promise<boolean> {

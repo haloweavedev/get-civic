@@ -1,23 +1,32 @@
-// src/components/dashboard/insights/strategic-overview/index.tsx
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Shield, 
   AlertTriangle, 
   Clock,
   Crosshair,
-  Target
+  Target,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import type { StrategicAnalysis } from '@/types/dashboard';
 import { formatDistanceToNow } from 'date-fns';
 
 interface StrategicOverviewProps {
   analysis: StrategicAnalysis;
+  onRefresh: () => Promise<void>;
+  isRefreshing: boolean;
+  newCommunicationsCount: number;
 }
 
-export function StrategicOverview({ analysis }: StrategicOverviewProps) {
+export function StrategicOverview({ 
+  analysis, 
+  onRefresh, 
+  isRefreshing, 
+  newCommunicationsCount 
+}: StrategicOverviewProps) {
   return (
     <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-2">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -25,9 +34,30 @@ export function StrategicOverview({ analysis }: StrategicOverviewProps) {
           <Shield className="h-5 w-5 text-slate-700" />
           <CardTitle className="text-lg font-bold tracking-tight">CIVIC SENTINEL ASSESSMENT</CardTitle>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          Updated {formatDistanceToNow(new Date(analysis.timestamp), { addSuffix: true })}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            Updated {formatDistanceToNow(new Date(analysis.timestamp), { addSuffix: true })}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onRefresh}
+            disabled={isRefreshing || newCommunicationsCount < 4}
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Analysis
+                {newCommunicationsCount > 0 && ` (${newCommunicationsCount} new)`}
+              </>
+            )}
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
