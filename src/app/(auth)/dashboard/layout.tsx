@@ -45,14 +45,9 @@ const navigation = [
     ]
   },
   { 
-    name: 'Categories',
-    href: '/dashboard/categories',
-    icon: Layers
-  },
-  { 
     name: 'Insights',
     href: '/dashboard/insights',
-    icon: BarChart
+    icon: Layers
   },
   { 
     name: 'API', 

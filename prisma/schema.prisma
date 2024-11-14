@@ -65,8 +65,10 @@ model Communication {
   organization   Organization?    @relation(fields: [organizationId], references: [id])
   analysis       Analysis?        // One-to-one relation with Analysis
 
-  @@unique([sourceId, userId])
-  @@index([createdAt])
+  // Updated indexes for performance and consistency
+  @@unique([sourceId, userId, type])  // Ensure unique communications per user
+  @@index([createdAt, status])        // For faster filtering and sorting
+  @@index([type, status])             // For type-specific queries
 }
 
 model Analysis {
