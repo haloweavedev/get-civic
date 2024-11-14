@@ -110,8 +110,8 @@ export function StrategicOverview({
             </div>
             <ul className="space-y-2">
               {analysis.recommendedActions.map((action, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="text-slate-400 mt-1">•</span>
+                <li key={index} className="flex items-center gap-2">
+                  <span className="text-slate-400">•</span>
                   <span className="text-sm text-slate-600">{action}</span>
                 </li>
               ))}
