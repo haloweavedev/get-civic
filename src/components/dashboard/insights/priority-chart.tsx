@@ -41,14 +41,14 @@ export function PriorityChart({ data }: { data: PriorityData[] }) {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="priority-heading-container">
+        <div className="flex items-start justify-between">
           <CardTitle>Priority Distribution</CardTitle>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowGuide(true)}
-            className="h-8 w-8 rounded-full -mr-2"
+            className="h-8 w-8 rounded-full -mr-2 items-start"
           >
             <InfoIcon className="h-4 w-4 text-muted-foreground" />
           </Button>
