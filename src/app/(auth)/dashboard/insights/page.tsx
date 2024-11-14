@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { InsightsDashboard } from '@/components/dashboard/insights/insights-dashboard';
+import { InsightsAnalysisService } from '@/lib/services/insights-analysis';
 import type { CategoryData, MetricsData, Communication } from '@/types/dashboard';
 
 async function getInsightsData(userId: string) {
@@ -79,6 +80,17 @@ async function getInsightsData(userId: string) {
     percentage: (count / total) * 100,
   }));
 
+  // Get high-priority communications for strategic analysis
+  const highPriorityCommunications = communications
+    .filter(comm => comm.analysis?.priority >= 4)
+    .slice(0, 6);
+
+  // Generate strategic analysis
+  const strategicAnalysis = await InsightsAnalysisService.generateStrategicAnalysis(
+    Array.from(categoryMap.values()),
+    highPriorityCommunications
+  );
+
   // Get recent communications and pending analysis count
   const recentCommunications = await prisma.communication.findMany({
     where: { userId },
@@ -101,6 +113,7 @@ async function getInsightsData(userId: string) {
       sentiment: sentimentData,
       priorities: priorityData,
       communications: typeData,
+      strategicAnalysis, // Add strategic analysis to metrics
     },
     communications: recentCommunications,
     pendingCount,

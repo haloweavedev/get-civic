@@ -1,9 +1,11 @@
 "use client";
 
+import { StrategicOverview } from './strategic-overview';
 import { CategoryCloud } from './category-cloud';
 import { MetricsGrid } from './metrics-grid';
 import { CommunicationsTable } from './communications-table';
 import { syncCommunications, analyzePendingCommunications } from '@/app/actions';
+import { useQuery } from '@tanstack/react-query';
 import type { CategoryData, MetricsData, Communication } from '@/types/dashboard';
 
 interface InsightsDashboardProps {
@@ -17,6 +19,27 @@ interface InsightsDashboardProps {
 }
 
 export function InsightsDashboard({ data }: InsightsDashboardProps) {
+  // Add strategic analysis refresh logic
+  const { data: updatedAnalysis, refetch: refetchAnalysis } = useQuery({
+    queryKey: ['strategic-analysis'],
+    queryFn: async () => {
+      const response = await fetch('/api/insights/strategic-analysis');
+      return response.json();
+    },
+    initialData: data.metrics.strategicAnalysis,
+    refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
+  });
+
+  const handleSync = async () => {
+    await syncCommunications();
+    refetchAnalysis();
+  };
+
+  const handleAnalyze = async () => {
+    await analyzePendingCommunications();
+    refetchAnalysis();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -31,9 +54,11 @@ export function InsightsDashboard({ data }: InsightsDashboardProps) {
       <CommunicationsTable
         communications={data.communications}
         pendingCount={data.pendingCount}
-        onSync={syncCommunications}
-        onAnalyze={analyzePendingCommunications}
+        onSync={handleSync}
+        onAnalyze={handleAnalyze}
       />
+      {/* Strategic Overview */}
+      <StrategicOverview analysis={updatedAnalysis} />
     </div>
   );
 }

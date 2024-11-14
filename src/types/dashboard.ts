@@ -1,19 +1,16 @@
 // src/types/dashboard.ts
 
-// Types related to communication types
+// Base interfaces
 export interface CommunicationType {
     type: 'EMAIL' | 'SMS' | 'CALL';
   }
   
-  // Sentiment analysis interface
   export interface SentimentAnalysis {
     label: 'positive' | 'negative' | 'neutral';
-    score: number; // -1 to 1
+    score: number;
     reasoning: string;
-    confidence: number; // 0 to 1
   }
   
-  // Communication interface
   export interface Communication {
     id: string;
     type: CommunicationType['type'];
@@ -32,7 +29,25 @@ export interface CommunicationType {
     };
   }
   
-  // Category data interface
+  // Strategic Analysis types
+  export interface CriticalIssue {
+    category: string;
+    description: string;
+    urgency: string;
+    affectedArea: string;
+    count: number;
+    recentCommunications: Communication[];
+  }
+  
+  export interface StrategicAnalysis {
+    timestamp: Date;
+    summary: string;
+    criticalIssues: CriticalIssue[];
+    recommendedActions: string[];
+    monitoringPriorities: string[];
+  }
+  
+  // Category and Metrics data
   export interface CategoryData {
     name: string;
     count: number;
@@ -40,7 +55,6 @@ export interface CommunicationType {
     communications: Communication[];
   }
   
-  // Metrics data interface
   export interface MetricsData {
     sentiment: Array<{
       label: string;
@@ -57,23 +71,10 @@ export interface CommunicationType {
       count: number;
       percentage: number;
     }>;
-  }
-
-  // Dashboard metrics interface (for simplified metrics display)
-  export interface DashboardMetrics {
-    totalCommunications: number;
-    sentiment: {
-      label: 'positive' | 'negative' | 'neutral';
-      percentage: number;
-    };
-    topCategory: {
-      name: string;
-      count: number;
-      percentage: number;
-    };
+    strategicAnalysis?: StrategicAnalysis;
   }
   
-  // Insights dashboard props interface
+  // Dashboard props interfaces
   export interface InsightsDashboardProps {
     categories: CategoryData[];
     metrics: MetricsData;
