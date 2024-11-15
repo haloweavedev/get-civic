@@ -1,3 +1,5 @@
+// src/lib/integrations/gmail/types.ts
+
 import type { IntegrationTokens } from '../types';
 
 export interface GmailTokens extends IntegrationTokens {
@@ -6,34 +8,31 @@ export interface GmailTokens extends IntegrationTokens {
   scope: string;
 }
 
-export interface EmailMetadata {
+export interface GmailMetadata {
+  source: 'GMAIL';
+  date: string;
+  threadId: string;
+  fromName?: string;
+  syncedAt: string;
+  lastSync?: string;
+  labels?: string[];
+}
+
+export interface EmailDetails {
   id: string;
   threadId: string;
   subject: string;
-  from: {
-    email: string;
-    name?: string;
-  };
-  to: {
-    email: string;
-    name?: string;
-  };
+  from: string;
+  fromName?: string;
   date: string;
-  snippet: string;
-  labels: string[];
-}
-
-export interface EmailContent {
-  id: string;
-  threadId: string;
   content: string;
   snippet?: string;
-  attachments?: Array<{
-    id: string;
-    name: string;
-    mimeType: string;
-    size?: number;
-  }>;
+}
+
+export interface SyncResult {
+  new: number;
+  total: number;
+  error?: string;
 }
 
 export const validateGmailScope = (scope: string): boolean => {

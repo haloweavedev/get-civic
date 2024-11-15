@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Loader2, Mail, CheckCircle, XCircle, RefreshCw, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 type EmailPreview = {
   id: string;
@@ -33,16 +34,25 @@ type Props = {
   latestEmails: EmailPreview[];
 };
 
+interface SyncResponse {
+  success: boolean;
+  new?: number;
+  total?: number;
+  error?: string;
+}
+
 export default function GmailIntegrationClient({
   isConnected,
   emailCount,
   lastSynced,
   userId,
-  latestEmails
+  latestEmails,
 }: Props) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleConnect = async () => {
@@ -50,7 +60,7 @@ export default function GmailIntegrationClient({
       setIsConnecting(true);
       const response = await fetch('/api/integrations/gmail/auth');
       const data = await response.json();
-      
+
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
@@ -72,23 +82,38 @@ export default function GmailIntegrationClient({
 
     try {
       setIsSyncing(true);
+      setSyncProgress('Initializing sync...');
+      setLastSyncError(null);
+
       const response = await fetch('/api/integrations/gmail/sync', {
-        method: 'POST'
+        method: 'POST',
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to sync');
+        throw new Error(error.error || 'Sync failed');
       }
 
-      const data = await response.json();
-      toast.success(`Synced ${data.new} new emails`);
-      router.refresh();
+      const data: SyncResponse = await response.json();
+
+      if (data.error) {
+        if (data.error.includes('token')) {
+          toast.error('Gmail connection expired. Please reconnect your account.');
+          setLastSyncError('Gmail connection expired. Please reconnect.');
+        } else {
+          throw new Error(data.error);
+        }
+      } else if (data.success) {
+        toast.success(`Synced ${data.new} new emails`);
+        router.refresh();
+      }
     } catch (error) {
-      toast.error('Failed to sync emails');
-      console.error('Sync error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to sync emails';
+      setLastSyncError(message);
+      toast.error(message);
     } finally {
       setIsSyncing(false);
+      setSyncProgress(null);
     }
   };
 
@@ -96,7 +121,7 @@ export default function GmailIntegrationClient({
     try {
       setIsDisconnecting(true);
       const response = await fetch('/api/integrations/gmail/disconnect', {
-        method: 'POST'
+        method: 'POST',
       });
 
       if (!response.ok) {
@@ -119,7 +144,7 @@ export default function GmailIntegrationClient({
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -141,7 +166,7 @@ export default function GmailIntegrationClient({
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Gmail Integration</h2>
         <p className="text-muted-foreground">
-          Connect your Gmail account to start analyzing email communications
+          Connect your Gmail account to start analyzing email communications.
         </p>
       </div>
 
@@ -152,10 +177,7 @@ export default function GmailIntegrationClient({
               <CardTitle>Connection Status</CardTitle>
               <CardDescription>Current status of your Gmail integration</CardDescription>
             </div>
-            <Badge 
-              variant={isConnected ? "default" : "destructive"}
-              className="h-8"
-            >
+            <Badge variant={isConnected ? 'default' : 'destructive'} className="h-8">
               {isConnected ? (
                 <>
                   <CheckCircle className="mr-1 h-4 w-4" />
@@ -183,7 +205,7 @@ export default function GmailIntegrationClient({
                     <div>
                       <div className="text-sm font-medium text-muted-foreground">Last Synced</div>
                       <div className="text-sm font-medium">
-                        {formatDate(lastSynced)}
+                        {formatDistanceToNow(new Date(lastSynced), { addSuffix: true })}
                       </div>
                     </div>
                   )}
@@ -193,15 +215,19 @@ export default function GmailIntegrationClient({
                   </div>
                 </div>
 
+                {lastSyncError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {lastSyncError}
+                  </div>
+                )}
+
                 <div className="flex gap-4">
-                  <Button
-                    onClick={handleSync}
-                    disabled={isSyncing || isDisconnecting}
-                  >
+                  <Button onClick={handleSync} disabled={isSyncing || isDisconnecting}>
                     {isSyncing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Syncing...
+                        {syncProgress || 'Syncing...'}
                       </>
                     ) : (
                       <>
@@ -241,9 +267,7 @@ export default function GmailIntegrationClient({
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
                                   <h4 className="font-medium">{email.subject}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    From: {email.from}
-                                  </p>
+                                  <p className="text-sm text-muted-foreground">From: {email.from}</p>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   {getStatusBadge(email.status)}
@@ -266,15 +290,11 @@ export default function GmailIntegrationClient({
                 <div className="bg-muted p-6 rounded-lg mb-6">
                   <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    Connect your Gmail account to start analyzing your email communications. 
-                    We'll only read emails sent to haloweaveinsights@gmail.com.
+                    Connect your Gmail account to start analyzing your email communications. We'll only read emails
+                    sent to haloweaveinsights@gmail.com.
                   </p>
                 </div>
-                <Button
-                  size="lg"
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                >
+                <Button size="lg" onClick={handleConnect} disabled={isConnecting}>
                   {isConnecting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,13 +1,11 @@
 // src/lib/integrations/utils.ts
 
-import { IntegrationError } from './errors';
-
 export const logger = {
   info: (message: string, metadata?: any) => {
     console.log(
       JSON.stringify({
-        level: 'info',
         timestamp: new Date().toISOString(),
+        level: 'info',
         message,
         ...metadata,
       })
@@ -17,52 +15,45 @@ export const logger = {
   error: (message: string, error: unknown, metadata?: any) => {
     console.error(
       JSON.stringify({
-        level: 'error',
         timestamp: new Date().toISOString(),
+        level: 'error',
         message,
         error: error instanceof Error
           ? {
               name: error.name,
               message: error.message,
               stack: error.stack,
-              ...(error instanceof IntegrationError && {
-                code: error.code,
-                status: error.status,
-                details: error.details,
-              }),
             }
           : error,
         ...metadata,
       })
     );
   },
-};
 
-export function handleIntegrationError(
-  error: unknown,
-  source?: string,
-  action?: string
-): IntegrationError {
-  if (error instanceof IntegrationError) {
-    return error;
+  warn: (message: string, metadata?: any) => {
+    console.warn(
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'warn',
+        message,
+        ...metadata,
+      })
+    );
+  },
+
+  debug: (message: string, metadata?: any) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: 'debug',
+          message,
+          ...metadata,
+        })
+      );
+    }
   }
-
-  const integrationError = new IntegrationError(
-    error instanceof Error ? error.message : 'Unknown integration error',
-    'INTEGRATION_ERROR',
-    500,
-    error
-  );
-
-  logger.error(
-    `Integration error ${source ? `in ${source}` : ''} ${
-      action ? `during ${action}` : ''
-    }`,
-    integrationError
-  );
-
-  return integrationError;
-}
+};
 
 export function parseEmailAddress(email: string): {
   email: string;
@@ -77,4 +68,11 @@ export function parseEmailAddress(email: string): {
     name: match[1]?.trim(),
     email: match[2]?.trim() || email
   };
+}
+
+export function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }
