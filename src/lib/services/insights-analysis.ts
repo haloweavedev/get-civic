@@ -1,3 +1,4 @@
+// Updated Code for src/lib/services/insights-analysis.ts
 import { openai } from '../openai';
 import { prisma } from '../prisma';
 import type { StrategicAnalysis, Communication, CategoryData } from '@/types/dashboard';
@@ -53,31 +54,58 @@ export class InsightsAnalysisService {
   }
 
   static async shouldGenerateNewAnalysis(userId: string): Promise<boolean> {
-    const latestAnalysis = await prisma.strategicAnalysis.findFirst({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    });
+    const [lastAnalysis, newCommunicationsCount] = await Promise.all([
+      prisma.strategicAnalysis.findFirst({
+        where: { userId },
+        orderBy: { timestamp: 'desc' },
+      }),
+      prisma.communication.count({
+        where: {
+          userId,
+          createdAt: {
+            gt: lastAnalysis?.timestamp ?? new Date(0)
+          },
+          status: 'PROCESSED'
+        }
+      })
+    ]);
 
-    if (!latestAnalysis) return true;
-
-    // Check if there have been 4 or more new communications
-    return latestAnalysis.newCommunicationsCount >= 4;
+    return !lastAnalysis || newCommunicationsCount >= 4;
   }
 
-  static async incrementNewCommunicationsCounter(userId: string): Promise<void> {
-    const latestAnalysis = await prisma.strategicAnalysis.findFirst({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    });
-
-    if (latestAnalysis) {
-      await prisma.strategicAnalysis.update({
-        where: { id: latestAnalysis.id },
-        data: {
-          newCommunicationsCount: latestAnalysis.newCommunicationsCount + 1
-        }
-      });
+  static async generateIfNeeded(userId: string): Promise<StrategicAnalysis | null> {
+    const shouldGenerate = await this.shouldGenerateNewAnalysis(userId);
+    
+    if (!shouldGenerate) {
+      return this.getLatestAnalysis(userId);
     }
+
+    // Get data for new analysis
+    const [categories, communications] = await Promise.all([
+      prisma.analysis.groupBy({
+        by: ['categories'],
+        _count: true,
+        where: { communication: { userId } }
+      }),
+      prisma.communication.findMany({
+        where: {
+          userId,
+          status: 'PROCESSED',
+          analysis: {
+            priority: { gte: 4 }
+          }
+        },
+        include: { analysis: true },
+        orderBy: { createdAt: 'desc' },
+        take: 6
+      })
+    ]);
+
+    return this.generateAndSaveAnalysis(
+      userId,
+      categories,
+      communications
+    );
   }
 
   static async generateAndSaveAnalysis(
@@ -192,31 +220,5 @@ export class InsightsAnalysisService {
       recommendedActions: dbAnalysis.recommendedActions,
       monitoringPriorities: dbAnalysis.monitoringPriorities,
     };
-  }
-
-  static async shouldUpdateAnalysis(lastAnalysis: StrategicAnalysis | null): Promise<boolean> {
-    if (!lastAnalysis) return true;
-
-    const timeSinceLastUpdate = Date.now() - lastAnalysis.timestamp.getTime();
-    const hoursSinceLastUpdate = timeSinceLastUpdate / (1000 * 60 * 60);
-
-    // Update if more than 4 hours have passed
-    if (hoursSinceLastUpdate > 4) return true;
-
-    // Check for new high-priority communications since last update
-    const newHighPriorityCommunications = await prisma.communication.count({
-      where: {
-        createdAt: {
-          gt: lastAnalysis.timestamp
-        },
-        analysis: {
-          priority: {
-            gte: 4
-          }
-        }
-      }
-    });
-
-    return newHighPriorityCommunications > 0;
   }
 }

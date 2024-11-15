@@ -48,12 +48,31 @@ export interface CommunicationType {
   }
   
   // Category and Metrics data
-  export interface CategoryData {
-    name: string;
-    count: number;
-    percentage: number;
-    communications: Communication[];
-  }
+export interface CategoryData {
+  name: string;
+  count: number;
+  percentage: number;
+  communications: Array<{
+    id: string;
+    type: 'EMAIL' | 'SMS' | 'CALL';
+    subject: string;
+    content: string;
+    from: string;
+    createdAt: Date;
+    status: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+    analysis?: {
+      sentiment: {
+        label: string;
+        score: number;
+      };
+      categories: {
+        primary: string;
+        secondary: string[];
+      };
+      priority: number;
+    };
+  }>;
+}
   
   export interface MetricsData {
     sentiment: Array<{

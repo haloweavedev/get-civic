@@ -1,6 +1,7 @@
+// src/components/dashboard/insights/insights-dashboard.tsx
 "use client";
 
-import { StrategicOverview } from './strategic-overview';
+import { StrategicOverview } from './strategic-overview'; 
 import { CategoryCloud } from './category-cloud';
 import { MetricsGrid } from './metrics-grid';
 import { CommunicationsTable } from './communications-table';
@@ -15,7 +16,7 @@ interface InsightsDashboardProps {
     metrics: MetricsData;
     communications: Communication[];
     pendingCount: number;
-  };
+  };  
 }
 
 export function InsightsDashboard({ data }: InsightsDashboardProps) {
@@ -57,9 +58,8 @@ export function InsightsDashboard({ data }: InsightsDashboardProps) {
         onSync={handleSync}
         onAnalyze={handleAnalyze}
       />
-      {/* Strategic Overview */}
-      <StrategicOverview 
-        analysis={updatedAnalysis} 
+      <StrategicOverview
+        analysis={updatedAnalysis}
         onRefresh={async () => { await refetchAnalysis(); }}
         isRefreshing={false}
         newCommunicationsCount={data.pendingCount}

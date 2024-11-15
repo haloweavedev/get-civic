@@ -1,120 +1,140 @@
+// src/app/(auth)/dashboard/insights/page.tsx
+import { Suspense } from 'react';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { InsightsDashboard } from '@/components/dashboard/insights/insights-dashboard';
 import { InsightsAnalysisService } from '@/lib/services/insights-analysis';
-import type { CategoryData, MetricsData, Communication } from '@/types/dashboard';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { InsightsDashboard } from '@/components/dashboard/insights/insights-dashboard';
+import {
+  MetricsGridSkeleton,
+  CategoryCloudSkeleton,
+  StrategicOverviewSkeleton,
+  CommunicationsTableSkeleton
+} from '@/components/skeletons';
 
-async function getInsightsData(userId: string) {
-  const communications = await prisma.communication.findMany({
-    where: {
-      userId,
-      status: 'PROCESSED',
-    },
-    include: {
-      analysis: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+// Separate data fetching functions for better performance
+async function getCategoryData(userId: string) {
+  const result = await prisma.$queryRaw<Array<{
+    category: string;
+    count: bigint;
+    communications: Communication[];
+  }>>`
+    WITH CategoryStats AS (
+      SELECT 
+        COALESCE(jsonb_extract_path_text(a.categories, 'primary'), 'Uncategorized') as category,
+        COUNT(*) as count,
+        jsonb_agg(c.* ORDER BY c."createdAt" DESC) as communications
+      FROM "Communication" c
+      LEFT JOIN "Analysis" a ON c.id = a."communicationId"
+      WHERE c."userId" = ${userId}
+      AND c.status = 'PROCESSED'
+      GROUP BY jsonb_extract_path_text(a.categories, 'primary')
+    )
+    SELECT * FROM CategoryStats
+    ORDER BY count DESC
+  `;
 
-  // Process categories
-  const categoryMap = new Map<string, CategoryData>();
-  communications.forEach((comm) => {
-    const category = comm.analysis?.categories?.primary || 'Uncategorized';
-    if (!categoryMap.has(category)) {
-      categoryMap.set(category, {
-        name: category,
-        count: 0,
-        percentage: 0,
-        communications: [],
-      });
-    }
-    const categoryData = categoryMap.get(category)!;
-    categoryData.count++;
-    categoryData.communications.push(comm);
-  });
+  const total = result.reduce((sum, cat) => sum + Number(cat.count), 0);
 
-  // Calculate percentages for categories
+  return result.map(cat => ({
+    name: cat.category,
+    count: Number(cat.count),
+    percentage: (Number(cat.count) / total) * 100,
+    communications: cat.communications.slice(0, 5) // Limit to 5 recent communications
+  }));
+}
+
+async function getMetricsData(userId: string) {
+  const [communications, analysis] = await Promise.all([
+    prisma.communication.findMany({
+      where: {
+        userId,
+        status: 'PROCESSED',
+      },
+      include: {
+        analysis: true,
+      },
+      take: 100, // Limit for better performance
+    }),
+    InsightsAnalysisService.getLatestAnalysis(userId),
+  ]);
+
+  // Calculate distributions
   const total = communications.length;
-  categoryMap.forEach((category) => {
-    category.percentage = (category.count / total) * 100;
-  });
-
-  // Calculate sentiment distribution
+  
+  // Sentiment distribution
   const sentimentCounts = communications.reduce((acc, comm) => {
-    const sentiment = comm.analysis?.sentiment?.label?.toLowerCase() || 'neutral';
+    const sentiment = (comm.analysis?.sentiment as { label?: string })?.label?.toLowerCase() || 'neutral';
     acc[sentiment] = (acc[sentiment] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const sentimentData = Object.entries(sentimentCounts).map(([label, count]) => ({
+  const sentiment = Object.entries(sentimentCounts).map(([label, count]) => ({
     label,
     count,
     percentage: (count / total) * 100,
   }));
 
-  // Calculate priority distribution
+  // Priority distribution
   const priorityCounts = communications.reduce((acc, comm) => {
     const priority = comm.analysis?.priority || 3;
     acc[priority] = (acc[priority] || 0) + 1;
     return acc;
   }, {} as Record<number, number>);
 
-  const priorityData = Object.entries(priorityCounts).map(([level, count]) => ({
+  const priorities = Object.entries(priorityCounts).map(([level, count]) => ({
     level: parseInt(level),
     count,
     percentage: (count / total) * 100,
   }));
 
-  // Calculate type distribution
-  const typeCounts = communications.reduce((acc, comm) => {
-    acc[comm.type] = (acc[comm.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const typeData = Object.entries(typeCounts).map(([type, count]) => ({
+  // Communication type distribution
+  const typeData = Object.entries(
+    communications.reduce((acc, comm) => {
+      acc[comm.type] = (acc[comm.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([type, count]) => ({
     type: type as 'EMAIL' | 'SMS' | 'CALL',
     count,
     percentage: (count / total) * 100,
   }));
 
-  // Get high-priority communications for strategic analysis
-  const highPriorityCommunications = communications
-    .filter(comm => comm.analysis?.priority >= 4)
-    .slice(0, 6);
+  return {
+    sentiment,
+    priorities,
+    communications: typeData,
+    strategicAnalysis: analysis
+  } as MetricsData;
+}
 
-  // Generate strategic analysis
-  const strategicAnalysis = await InsightsAnalysisService.generateStrategicAnalysis(
-    Array.from(categoryMap.values()),
-    highPriorityCommunications
-  );
-
-  // Get recent communications and pending analysis count
-  const recentCommunications = await prisma.communication.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
-    take: 6,
-    include: { analysis: true },
-  });
-
-  const pendingCount = await prisma.communication.count({
-    where: {
-      userId,
-      status: 'PENDING',
-    },
-  });
+async function getInitialData(userId: string) {
+  const [
+    categories,
+    metrics,
+    recentCommunications,
+    pendingCount
+  ] = await Promise.all([
+    getCategoryData(userId),
+    getMetricsData(userId),
+    prisma.communication.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+      include: { analysis: true },
+    }),
+    prisma.communication.count({
+      where: {
+        userId,
+        status: 'PENDING',
+      },
+    })
+  ]);
 
   return {
-    categories: Array.from(categoryMap.values()),
-    totalCommunications: total,
-    metrics: {
-      sentiment: sentimentData,
-      priorities: priorityData,
-      communications: typeData,
-      strategicAnalysis, // Add strategic analysis to metrics
-    },
+    categories,
+    metrics,
     communications: recentCommunications,
     pendingCount,
   };
@@ -126,7 +146,16 @@ export default async function InsightsPage() {
     redirect('/sign-in');
   }
 
-  const data = await getInsightsData(userId);
+  // Get initial data
+  const data = await getInitialData(userId);
 
-  return <InsightsDashboard data={data} />;
+  return (
+    <div className="space-y-6">
+      <ErrorBoundary>
+        <Suspense fallback={<MetricsGridSkeleton />}>
+          <InsightsDashboard data={data} />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
 }

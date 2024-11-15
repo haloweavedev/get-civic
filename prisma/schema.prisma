@@ -10,98 +10,102 @@ datasource db {
 }
 
 model User {
-  id             String               @id @default(cuid())
-  email          String               @unique
-  name           String?
-  role           UserRole             @default(USER)
-  settings       Json?                @default("{}")
-  apiKey         String?              @unique
-  apiUsage       Int                  @default(0)
-  apiLimit       Int                  @default(1000)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  communications Communication[]
-  organizations  OrganizationMember[]
+  id                    String               @id @default(cuid())
+  email                 String               @unique
+  name                  String?
+  role                  UserRole             @default(USER)
+  settings              Json?                @default("{}")
+  apiKey                String?              @unique
+  apiUsage              Int                  @default(0)
+  apiLimit              Int                  @default(1000)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  communications        Communication[]
+  organizations         OrganizationMember[]
+  strategicAnalyses     StrategicAnalysis[]  // Add reverse relation
 }
 
 model Organization {
-  id             String               @id @default(cuid())
-  name           String
-  settings       Json?                @default("{}")
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  communications Communication[]      // One-to-many relation with Communication
-  members        OrganizationMember[]
+  id                    String               @id @default(cuid())
+  name                  String
+  settings              Json?                @default("{}")
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  communications        Communication[]      // One-to-many relation with Communication
+  members               OrganizationMember[]
 }
 
 model OrganizationMember {
-  id             String       @id @default(cuid())
-  organizationId String
-  userId         String
-  role           MemberRole   @default(MEMBER)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  user           User         @relation(fields: [userId], references: [id])
+  id                    String       @id @default(cuid())
+  organizationId        String
+  userId                String
+  role                  MemberRole   @default(MEMBER)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  user                  User         @relation(fields: [userId], references: [id])
 
   @@unique([organizationId, userId])
 }
 
 model Communication {
-  id             String           @id @default(cuid())
-  type           CommunicationType
-  sourceId       String
-  direction      Direction        @default(INBOUND)
-  subject        String
-  from           String
-  content        String           // Will contain transcription for calls
-  metadata       Json             // For storing recording/transcription metadata
-  status         ProcessingStatus @default(PENDING)
-  userId         String
-  organizationId String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  user           User             @relation(fields: [userId], references: [id])
-  organization   Organization?    @relation(fields: [organizationId], references: [id])
-  analysis       Analysis?        // One-to-one relation with Analysis
+  id                    String           @id @default(cuid())
+  type                  CommunicationType
+  sourceId              String
+  direction             Direction        @default(INBOUND)
+  subject               String
+  from                  String
+  content               String           // Will contain transcription for calls
+  metadata              Json             // For storing recording/transcription metadata
+  status                ProcessingStatus @default(PENDING)
+  userId                String
+  organizationId        String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  user                  User             @relation(fields: [userId], references: [id])
+  organization          Organization?    @relation(fields: [organizationId], references: [id])
+  analysis              Analysis?        // One-to-one relation with Analysis
 
   // Updated indexes for performance and consistency
   @@unique([sourceId, userId, type])  // Ensure unique communications per user
   @@index([createdAt, status])        // For faster filtering and sorting
   @@index([type, status])             // For type-specific queries
+  @@index([userId, createdAt, status]) // For counting new communications efficiently
+  @@index([userId, type])             // For type distribution analysis
 }
 
 model Analysis {
-  id              String        @id @default(cuid())
-  version         String
-  sentiment       Json
-  summary         String
-  categories      Json
-  entities        Json
-  intentions      String[]
-  priority        Int           @default(0)
-  language        String
-  confidence      Float
-  processingTime  Int
-  communicationId String        @unique
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  communication   Communication @relation(fields: [communicationId], references: [id])
+  id                    String        @id @default(cuid())
+  version               String
+  sentiment             Json
+  summary               String
+  categories            Json
+  entities              Json
+  intentions            String[]
+  priority              Int           @default(0)
+  language              String
+  confidence            Float
+  processingTime        Int
+  communicationId       String        @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  communication         Communication @relation(fields: [communicationId], references: [id])
 
   @@index([communicationId])
 }
 
 model StrategicAnalysis {
-  id              String        @id @default(cuid())
-  timestamp       DateTime      @default(now())
-  summary         String        @db.Text
-  criticalIssues  Json         // Stores the array of critical issues
-  recommendedActions Json      // Stores the array of recommended actions
-  monitoringPriorities Json   // Stores the array of monitoring priorities
-  newCommunicationsCount Int  @default(0)  // Counter for new communications since last analysis
-  userId          String       // Link to the user this analysis belongs to
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                    String        @id @default(cuid())
+  timestamp             DateTime      @default(now())
+  summary               String        @db.Text
+  criticalIssues        Json          // Stores the array of critical issues
+  recommendedActions    Json          // Stores the array of recommended actions
+  monitoringPriorities  Json          // Stores the array of monitoring priorities
+  newCommunicationsCount Int          @default(0)  // Counter for new communications since last analysis
+  userId                String        // Link to the user this analysis belongs to
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  user                  User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([timestamp])
