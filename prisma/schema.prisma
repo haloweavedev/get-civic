@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider        = "prisma-client-js"
   binaryTargets   = ["native", "rhel-openssl-3.0.x"]
@@ -65,13 +67,21 @@ model Communication {
   user                  User             @relation(fields: [userId], references: [id])
   organization          Organization?    @relation(fields: [organizationId], references: [id])
   analysis              Analysis?        // One-to-one relation with Analysis
+  
+  // New fields based on AI insights
+  source                CommunicationSource @default(HUMAN)
+  isAutomatedResponse   Boolean             @default(false)
+  parentCommunicationId String?             // For linking automated responses to original communications
+  parentCommunication   Communication?      @relation("ResponseToOriginal", fields: [parentCommunicationId], references: [id])
+  automatedResponses    Communication[]     @relation("ResponseToOriginal")
+  excludeFromAnalysis   Boolean             @default(false)
 
   // Updated indexes for performance and consistency
-  @@unique([sourceId, userId, type])  // Ensure unique communications per user
-  @@index([createdAt, status])        // For faster filtering and sorting
-  @@index([type, status])             // For type-specific queries
-  @@index([userId, createdAt, status]) // For counting new communications efficiently
-  @@index([userId, type])             // For type distribution analysis
+  @@unique([sourceId, userId, type])        // Ensure unique communications per user
+  @@index([createdAt, status])              // For faster filtering and sorting
+  @@index([type, status])                   // For type-specific queries
+  @@index([userId, createdAt, status])      // For counting new communications efficiently
+  @@index([userId, type])                   // For type distribution analysis
 }
 
 model Analysis {
@@ -139,4 +149,10 @@ enum ProcessingStatus {
   PROCESSING
   PROCESSED
   FAILED
+}
+
+enum CommunicationSource {
+  HUMAN
+  AUTOMATED
+  SYSTEM
 }

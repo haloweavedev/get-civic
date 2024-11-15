@@ -252,21 +252,35 @@ export type AnalysisResult = {
 export class AIAnalysisService {
   static async analyzeCommunication(communicationId: string, forceReanalysis: boolean = false): Promise<void> {
     try {
-      // Get communication
+      // Get communication with source and exclusion checks
       const communication = await prisma.communication.findUnique({
-        where: { id: communicationId },
+        where: {
+          id: communicationId,
+          AND: [
+            { source: 'HUMAN' },
+            { excludeFromAnalysis: false },
+            { isAutomatedResponse: false }
+          ]
+        },
         include: {
           analysis: true
         }
       });
 
       if (!communication) {
-        throw new Error(`Communication not found: ${communicationId}`);
+        logger.info('Skipping analysis - communication not eligible', {
+          communicationId,
+          reason: 'not_eligible_for_analysis'
+        });
+        return;
       }
 
       // Skip if already analyzed and not forcing reanalysis
       if (communication.analysis && !forceReanalysis) {
-        console.log(`Communication ${communicationId} already analyzed. Skipping.`);
+        logger.info('Skipping analysis - already analyzed', {
+          communicationId,
+          reason: 'already_analyzed'
+        });
         return;
       }
 
@@ -278,6 +292,12 @@ From: ${communication.from}
 Content: ${communication.content}
 Additional Context: ${JSON.stringify(communication.metadata)}
 `.trim();
+
+      logger.info('Starting analysis', {
+        communicationId,
+        type: communication.type,
+        contentLength: communication.content.length
+      });
 
       // Get AI analysis
       const completion = await openai.chat.completions.create({
@@ -304,6 +324,10 @@ Additional Context: ${JSON.stringify(communication.metadata)}
       try {
         analysisResult = JSON.parse(assistantReply) as AnalysisResult;
       } catch (parseError) {
+        logger.error('Failed to parse analysis result', {
+          communicationId,
+          error: parseError
+        });
         throw new Error(`Failed to parse analysis result JSON: ${(parseError as Error).message}`);
       }
 
@@ -315,7 +339,7 @@ Additional Context: ${JSON.stringify(communication.metadata)}
       }
 
       // Store analysis results
-      await prisma.analysis.create({
+      const analysis = await prisma.analysis.create({
         data: {
           communicationId: communication.id,
           version: 'v2',
@@ -337,10 +361,18 @@ Additional Context: ${JSON.stringify(communication.metadata)}
         data: { status: 'PROCESSED' },
       });
 
-      console.log(`Successfully analyzed communication ${communicationId}`);
+      logger.info('Analysis completed successfully', {
+        communicationId,
+        analysisId: analysis.id,
+        priority: analysisResult.priority.score,
+        category: analysisResult.categories.primary
+      });
 
     } catch (error) {
-      console.error('Analysis failed:', error);
+      logger.error('Analysis failed', {
+        communicationId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       
       // Update communication status to failed
       await prisma.communication.update({
@@ -361,31 +393,66 @@ Additional Context: ${JSON.stringify(communication.metadata)}
       failed: [] as string[],
     };
 
+    // Get only eligible communications
+    const eligibleCommunications = await prisma.communication.findMany({
+      where: {
+        id: { in: communicationIds },
+        source: 'HUMAN',
+        excludeFromAnalysis: false,
+        isAutomatedResponse: false
+      },
+      select: { id: true }
+    });
+
+    logger.info('Starting batch analysis', {
+      requested: communicationIds.length,
+      eligible: eligibleCommunications.length
+    });
+
     // Process in batches of 5 to avoid rate limiting
     const batchSize = 5;
-    for (let i = 0; i < communicationIds.length; i += batchSize) {
-      const batch = communicationIds.slice(i, i + batchSize);
+    for (let i = 0; i < eligibleCommunications.length; i += batchSize) {
+      const batch = eligibleCommunications.slice(i, i + batchSize);
       
       // Process batch in parallel
-      const promises = batch.map(id => 
-        this.analyzeCommunication(id, forceReanalysis)
-          .then(() => results.success.push(id))
-          .catch(() => results.failed.push(id))
+      const promises = batch.map(comm => 
+        this.analyzeCommunication(comm.id, forceReanalysis)
+          .then(() => results.success.push(comm.id))
+          .catch(() => results.failed.push(comm.id))
       );
 
       await Promise.all(promises);
+
+      // Add brief delay between batches to avoid rate limits
+      if (i + batchSize < eligibleCommunications.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
+
+    logger.info('Batch analysis completed', {
+      success: results.success.length,
+      failed: results.failed.length
+    });
 
     return results;
   }
 
   static async reanalyzeAll(): Promise<void> {
     const communications = await prisma.communication.findMany({
+      where: {
+        source: 'HUMAN',
+        excludeFromAnalysis: false,
+        isAutomatedResponse: false
+      },
       select: { id: true }
     });
 
-    console.log(`Starting reanalysis of ${communications.length} communications...`);
-    await this.analyzeMultiple(communications.map(c => c.id), true);
-    console.log('Reanalysis complete!');
+    logger.info(`Starting reanalysis of ${communications.length} communications...`);
+    const results = await this.analyzeMultiple(communications.map(c => c.id), true);
+    logger.info('Reanalysis complete', {
+      total: communications.length,
+      success: results.success.length,
+      failed: results.failed.length
+    });
   }
 }

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { CategoryData, Communication } from '@/types/dashboard';
+import type { CategoryData } from '@/types/dashboard';
 
 interface CategoryCloudProps {
   categories: CategoryData[];
@@ -55,9 +55,13 @@ export function CategoryCloud({ categories }: CategoryCloudProps) {
                 <div key={comm.id} className="p-4 rounded-lg border">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{comm.subject}</h4>
-                    <Badge variant={getSentimentVariant(comm.analysis?.sentiment)}>
-                      {comm.analysis?.sentiment?.label ?? 'Unknown'}
-                    </Badge>
+                    {comm.analysis && comm.analysis.sentiment ? (
+                      <Badge variant={getSentimentVariant(comm.analysis.sentiment.label)}>
+                        {comm.analysis.sentiment.label}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Unknown</Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {comm.content}
@@ -75,14 +79,13 @@ export function CategoryCloud({ categories }: CategoryCloudProps) {
   );
 }
 
-function getSentimentVariant(sentiment: { label: string } | undefined): "default" | "secondary" | "destructive" | "outline" | null | undefined {
-  if (!sentiment || !sentiment.label) {
-    return 'secondary';
-  }
-
-  switch (sentiment.label) {
-    case 'positive': return 'default';
-    case 'negative': return 'destructive';
-    default: return 'secondary';
+function getSentimentVariant(label: string) {
+  switch (label.toLowerCase()) {
+    case 'positive':
+      return 'default';
+    case 'negative':
+      return 'destructive';
+    default:
+      return 'secondary';
   }
 }
