@@ -30,14 +30,14 @@ export function InsightsDashboard({ data }: InsightsDashboardProps) {
     refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
   });
 
-  const handleSync = async () => {
+  const handleSync = async (): Promise<void> => {
     await syncCommunications();
-    refetchAnalysis();
+    await refetchAnalysis();
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (): Promise<void> => {
     await analyzePendingCommunications();
-    refetchAnalysis();
+    await refetchAnalysis();
   };
 
   return (
@@ -58,7 +58,12 @@ export function InsightsDashboard({ data }: InsightsDashboardProps) {
         onAnalyze={handleAnalyze}
       />
       {/* Strategic Overview */}
-      <StrategicOverview analysis={updatedAnalysis} />
+      <StrategicOverview 
+        analysis={updatedAnalysis} 
+        onRefresh={async () => { await refetchAnalysis(); }}
+        isRefreshing={false}
+        newCommunicationsCount={data.pendingCount}
+      />
     </div>
   );
 }
