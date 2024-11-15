@@ -1,5 +1,4 @@
 // src/app/(auth)/dashboard/settings/communications/page.tsx
-
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { CommunicationsManager } from '@/components/dashboard/settings/communications-manager';
@@ -7,11 +6,21 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { prisma } from '@/lib/prisma';
 
+type ValidTab = 'all' | 'human' | 'automated' | 'excluded';
+
 interface PageProps {
-  searchParams: { tab?: string };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function CommunicationsSettingsPage({ searchParams }: PageProps) {
+const validTabs = ['all', 'human', 'automated', 'excluded'] as const;
+
+function isValidTab(tab: unknown): tab is ValidTab {
+  return typeof tab === 'string' && validTabs.includes(tab as ValidTab);
+}
+
+export default async function CommunicationsSettingsPage({
+  searchParams = Promise.resolve({}),
+}: PageProps) {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
@@ -38,8 +47,20 @@ export default async function CommunicationsSettingsPage({ searchParams }: PageP
     }),
   };
 
-  // Safely access tab from searchParams
-  const activeTab = searchParams?.tab || 'all';
+  // Default to 'all' if no valid tab is provided
+  let activeTab: ValidTab = 'all';
+
+  try {
+    const params = await searchParams;
+    const providedTab = params?.tab as string | undefined;
+
+    if (providedTab && isValidTab(providedTab)) {
+      activeTab = providedTab;
+    }
+  } catch (error) {
+    console.error('Error parsing tab parameter:', error);
+    // Keep default 'all' tab
+  }
 
   return (
     <div className="space-y-6">
@@ -77,23 +98,17 @@ export default async function CommunicationsSettingsPage({ searchParams }: PageP
       <Card>
         <Tabs defaultValue={activeTab} className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none px-4">
-            <TabsTrigger value="all">All Communications</TabsTrigger>
-            <TabsTrigger value="human">Human</TabsTrigger>
-            <TabsTrigger value="automated">Automated</TabsTrigger>
-            <TabsTrigger value="excluded">Excluded</TabsTrigger>
+            {validTabs.map((tab) => (
+              <TabsTrigger key={tab} value={tab}>
+                {tab === 'all' ? 'All Communications' : `${tab.charAt(0).toUpperCase() + tab.slice(1)}`}
+              </TabsTrigger>
+            ))}
           </TabsList>
-          <TabsContent value="all">
-            <CommunicationsManager filter="all" userId={userId} />
-          </TabsContent>
-          <TabsContent value="human">
-            <CommunicationsManager filter="human" userId={userId} />
-          </TabsContent>
-          <TabsContent value="automated">
-            <CommunicationsManager filter="automated" userId={userId} />
-          </TabsContent>
-          <TabsContent value="excluded">
-            <CommunicationsManager filter="excluded" userId={userId} />
-          </TabsContent>
+          {validTabs.map((tab) => (
+            <TabsContent key={tab} value={tab}>
+              <CommunicationsManager filter={tab} userId={userId} />
+            </TabsContent>
+          ))}
         </Tabs>
       </Card>
 
