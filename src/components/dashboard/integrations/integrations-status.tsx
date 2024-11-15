@@ -75,9 +75,11 @@ export function IntegrationsStatus() {
                 </Badge>
               </div>
             </div>
+            {/*
             <div className="text-sm text-gray-600">
               Total emails: {stats?.emailCount || 0}
             </div>
+            */}
           </div>
 
           {/* Twilio Integration */}
@@ -92,12 +94,14 @@ export function IntegrationsStatus() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
+              {/*
               <div className="text-sm text-gray-600">
                 Total calls: {stats?.twilioStats?.calls || 0}
               </div>
               <div className="text-sm text-gray-600">
                 Total SMS: {stats?.twilioStats?.sms || 0}
               </div>
+              */}
             </div>
           </div>
         </div>

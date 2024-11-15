@@ -56,7 +56,7 @@ const navigation = [
   },
   { 
     name: 'Settings', 
-    href: '/dashboard/settings',
+    href: '/dashboard/settings/communications',
     icon: Settings 
   }
 ];
