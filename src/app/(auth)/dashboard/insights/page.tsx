@@ -18,13 +18,29 @@ async function getCategoryData(userId: string) {
   const result = await prisma.$queryRaw<Array<{
     category: string;
     count: bigint;
-    communications: Communication[];
+    communications: any[];
   }>>`
     WITH CategoryStats AS (
       SELECT 
         COALESCE(jsonb_extract_path_text(a.categories, 'primary'), 'Uncategorized') as category,
         COUNT(*) as count,
-        jsonb_agg(c.* ORDER BY c."createdAt" DESC) as communications
+        jsonb_agg(
+          jsonb_build_object(
+            'id', c.id,
+            'type', c.type,
+            'subject', c.subject,
+            'content', c.content,
+            'from', c."from",
+            'createdAt', c."createdAt",
+            'status', c.status,
+            'analysis', jsonb_build_object(
+              'sentiment', a.sentiment,
+              'categories', a.categories,
+              'priority', a.priority
+            )
+          )
+          ORDER BY c."createdAt" DESC
+        ) as communications
       FROM "Communication" c
       LEFT JOIN "Analysis" a ON c.id = a."communicationId"
       WHERE c."userId" = ${userId}
