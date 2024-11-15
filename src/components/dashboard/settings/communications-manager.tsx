@@ -93,7 +93,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
     },
   });
 
-  // Delete mutation for bulk delete
+  // Delete mutation with better error handling
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const response = await fetch('/api/settings/communications', {
@@ -101,18 +101,34 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       });
-      if (!response.ok) throw new Error('Failed to delete communications');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete communications');
+      }
       return response.json();
     },
-    onSuccess: () => {
-      toast.success('Communications deleted successfully');
+    onSuccess: (data) => {
+      toast.success(`Successfully deleted ${data.deleted} communications`);
       setSelectedComms([]);
       queryClient.invalidateQueries({ queryKey: ['communications'] });
     },
-    onError: (error) => {
-      toast.error('Failed to delete communications: ' + error.message);
+    onError: (error: Error) => {
+      console.error('Delete mutation error:', error);
+      toast.error(`Failed to delete communications: ${error.message}`);
     },
   });
+
+  // Function to handle delete action
+  const handleDelete = async () => {
+    if (!selectedComms.length) {
+      toast.error('No communications selected');
+      return;
+    }
+
+    if (confirm('Are you sure you want to delete these communications?')) {
+      await deleteMutation.mutateAsync(selectedComms);
+    }
+  };
 
   // Mutation for toggling exclusion from analysis
   const toggleExclusionMutation = useMutation({
@@ -228,15 +244,20 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => deleteMutation.mutate(selectedComms)}
+              onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
               ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected ({selectedComms.length})
+                </>
               )}
-              Delete Selected
             </Button>
             <Button
               variant="outline"

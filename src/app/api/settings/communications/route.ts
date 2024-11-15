@@ -5,11 +5,16 @@ import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
-// Update the query schema to make types and search optional
+// Schema for validating query parameters
 const querySchema = z.object({
   filter: z.enum(['all', 'human', 'automated', 'excluded']).default('all'),
-  types: z.string().optional().nullable(), // Make it optional and allow null
-  search: z.string().optional().nullable(), // Make it optional and allow null
+  types: z.string().optional().nullable(), // Optional and can be null
+  search: z.string().optional().nullable(), // Optional and can be null
+});
+
+// Schema for validating DELETE request body
+const deleteSchema = z.object({
+  ids: z.array(z.string()).min(1, "At least one ID is required"),
 });
 
 export async function GET(req: Request) {
@@ -42,7 +47,7 @@ export async function GET(req: Request) {
         break;
     }
 
-    // Apply type filter only if types is provided and not empty
+    // Apply type filter if types are provided and not empty
     if (validatedParams.types?.length) {
       const types = validatedParams.types.split(',');
       if (types.length > 0) {
@@ -50,7 +55,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // Apply search filter only if search is provided and not empty
+    // Apply search filter if search term is provided and not empty
     if (validatedParams.search?.length) {
       where.OR = [
         { subject: { contains: validatedParams.search, mode: 'insensitive' } },
@@ -81,4 +86,76 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    console.log('Delete request body:', body); // Debug log
+
+    const { ids } = deleteSchema.parse(body);
+
+    // Verify ownership of all communications
+    const commsToDelete = await prisma.communication.findMany({
+      where: {
+        id: { in: ids },
+        userId,
+      },
+      select: { id: true },
+    });
+
+    console.log('Communications to delete:', commsToDelete); // Debug log
+
+    if (commsToDelete.length !== ids.length) {
+      return NextResponse.json(
+        { error: 'Some communications not found or not authorized' },
+        { status: 403 }
+      );
+    }
+
+    // Delete associated analyses first
+    await prisma.analysis.deleteMany({
+      where: {
+        communicationId: { in: ids },
+      },
+    });
+
+    // Delete communications
+    const deleteResult = await prisma.communication.deleteMany({
+      where: {
+        id: { in: ids },
+        userId,
+      },
+    });
+
+    console.log('Delete result:', deleteResult); // Debug log
+
+    return NextResponse.json({
+      success: true,
+      deleted: deleteResult.count,
+    });
+  } catch (error) {
+    console.error('Delete operation failed:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to delete communications',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'GET, DELETE',
+    },
+  });
 }

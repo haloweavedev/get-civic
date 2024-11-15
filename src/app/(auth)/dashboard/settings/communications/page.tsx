@@ -15,26 +15,31 @@ export default async function CommunicationsSettingsPage({ searchParams }: PageP
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
-  // Get communication stats
+  // Get communication stats using Prisma
   const stats = await prisma.communication.groupBy({
     by: ['source', 'type'],
     where: { userId },
-    _count: true
+    _count: true,
   });
 
   // Calculate totals
   const totals = {
-    human: stats.filter(s => s.source === 'HUMAN').reduce((acc, curr) => acc + curr._count, 0),
-    automated: stats.filter(s => s.source === 'AUTOMATED').reduce((acc, curr) => acc + curr._count, 0),
+    human: stats
+      .filter((s) => s.source === 'HUMAN')
+      .reduce((acc, curr) => acc + curr._count, 0),
+    automated: stats
+      .filter((s) => s.source === 'AUTOMATED')
+      .reduce((acc, curr) => acc + curr._count, 0),
     excluded: await prisma.communication.count({
       where: {
         userId,
-        excludeFromAnalysis: true
-      }
-    })
+        excludeFromAnalysis: true,
+      },
+    }),
   };
 
-  const activeTab = searchParams.tab || 'all';
+  // Safely access tab from searchParams
+  const activeTab = searchParams?.tab || 'all';
 
   return (
     <div className="space-y-6">
