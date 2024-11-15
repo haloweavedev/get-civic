@@ -36,6 +36,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// Define Communication interface
 interface Communication {
   id: string;
   type: 'EMAIL' | 'SMS' | 'CALL';
@@ -58,6 +59,7 @@ interface Communication {
   };
 }
 
+// Define Props interface
 interface CommunicationsManagerProps {
   filter: 'all' | 'human' | 'automated' | 'excluded';
   userId: string;
@@ -69,22 +71,29 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  // Fetch communications
+  // Helper function to build query params
+  const buildQueryParams = () => {
+    const params = new URLSearchParams({
+      filter,
+      search: searchTerm,
+    });
+    if (typeFilter.length > 0) {
+      params.append('types', typeFilter.join(','));
+    }
+    return params.toString();
+  };
+
+  // Fetch communications using react-query
   const { data: communications, isLoading } = useQuery<Communication[]>({
-    queryKey: ['communications', filter, typeFilter, userId],
+    queryKey: ['communications', filter, typeFilter, searchTerm, userId],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        filter,
-        types: typeFilter.join(','),
-        search: searchTerm,
-      });
-      const response = await fetch(`/api/settings/communications?${params}`);
+      const response = await fetch(`/api/settings/communications?${buildQueryParams()}`);
       if (!response.ok) throw new Error('Failed to fetch communications');
       return response.json();
     },
   });
 
-  // Mutation for bulk delete
+  // Delete mutation for bulk delete
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const response = await fetch('/api/settings/communications', {
@@ -105,7 +114,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
     },
   });
 
-  // Mutation for toggling analysis exclusion
+  // Mutation for toggling exclusion from analysis
   const toggleExclusionMutation = useMutation({
     mutationFn: async (data: { ids: string[]; exclude: boolean }) => {
       const response = await fetch('/api/settings/communications', {
@@ -129,7 +138,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
     },
   });
 
-  // Mutation for triggering reanalysis
+  // Mutation for reanalysis
   const reanalysisMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const response = await fetch('/api/settings/communications/reanalyze', {
@@ -150,6 +159,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
     },
   });
 
+  // Function to handle selecting all communications
   const handleSelectAll = () => {
     if (selectedComms.length === communications?.length) {
       setSelectedComms([]);
@@ -158,14 +168,14 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
     }
   };
 
+  // Function to handle individual communication selection
   const handleSelect = (id: string) => {
     setSelectedComms(prev =>
-      prev.includes(id)
-        ? prev.filter(commId => commId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter(commId => commId !== id) : [...prev, id]
     );
   };
 
+  // Function to return appropriate icon for communication type
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'EMAIL': return <Mail className="h-4 w-4" />;
@@ -201,9 +211,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
                   checked={typeFilter.includes(type)}
                   onCheckedChange={(checked) => {
                     setTypeFilter(prev =>
-                      checked
-                        ? [...prev, type]
-                        : prev.filter(t => t !== type)
+                      checked ? [...prev, type] : prev.filter(t => t !== type)
                     );
                   }}
                 >
@@ -233,10 +241,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
             <Button
               variant="outline"
               size="sm"
-              onClick={() => toggleExclusionMutation.mutate({
-                ids: selectedComms,
-                exclude: true
-              })}
+              onClick={() => toggleExclusionMutation.mutate({ ids: selectedComms, exclude: true })}
               disabled={toggleExclusionMutation.isPending}
             >
               {toggleExclusionMutation.isPending ? (
@@ -326,9 +331,7 @@ export function CommunicationsManager({ filter, userId }: CommunicationsManagerP
                       {format(new Date(comm.createdAt), 'MMM d, yyyy HH:mm')}
                     </td>
                     <td className="p-2">
-                      <Badge 
-                        variant={comm.excludeFromAnalysis ? 'destructive' : 'default'}
-                      >
+                      <Badge variant={comm.excludeFromAnalysis ? 'destructive' : 'default'}>
                         {comm.excludeFromAnalysis ? 'Excluded' : 'Included'}
                       </Badge>
                     </td>
