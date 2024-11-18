@@ -1,5 +1,6 @@
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
+import Image from "next/image"; 
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Activity, Zap } from "lucide-react";
 
@@ -18,8 +19,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex-shrink-0">
-              <Link href="/" className="text-2xl font-semibold text-gray-900">
-                Get Civic
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/images/CIVIC+light.png"
+                  alt="Get Civic Logo"
+                  width={120}
+                  height={40}
+                  priority
+                  className="object-contain"
+                />
               </Link>
             </div>
             <div className="hidden md:flex md:items-center md:space-x-6">
@@ -40,6 +48,7 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* Rest of the component remains unchanged */}
       {/* Hero Section */}
       <div className="relative pt-32 sm:pt-40 lg:pt-48">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">

@@ -15,7 +15,7 @@ export async function handleIncomingSMS(payload: TwilioSMSWebhookPayload) {
     // Get admin user - we use this for all Twilio communications
     const user = await prisma.user.findFirst({
       where: { 
-        email: 'haloweaveinsights@gmail.com',
+        email: '3advanceinsights@gmail.com',
         role: 'ADMIN'
       }
     });

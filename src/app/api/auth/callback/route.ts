@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     // Save tokens securely
     const user = await prisma.user.upsert({
       where: { 
-        email: 'haloweaveinsights@gmail.com'
+        email: '3advanceinsights@gmail.com'
       },
       update: {
         settings: {
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         }
       },
       create: {
-        email: 'haloweaveinsights@gmail.com',
+        email: '3advanceinsights@gmail.com',
         role: 'ADMIN',
         settings: {
           gmailTokens: tokens

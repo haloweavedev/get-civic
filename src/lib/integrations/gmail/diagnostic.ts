@@ -17,7 +17,7 @@ async function diagnoseGmailSync() {
     console.log('1️⃣ Checking Gmail Authentication...');
     const user = await prisma.user.findFirst({
       where: { 
-        email: 'haloweaveinsights@gmail.com'
+        email: '3advanceinsights@gmail.com'
       },
       select: {
         id: true,
@@ -73,7 +73,7 @@ async function diagnoseGmailSync() {
     const response = await gmail.users.messages.list({
       userId: 'me',
       maxResults: 10,
-      q: 'to:haloweaveinsights@gmail.com'
+      q: 'to:3advanceinsights@gmail.com'
     });
 
     const messages = response.data.messages || [];

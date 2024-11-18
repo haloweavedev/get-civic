@@ -131,7 +131,7 @@ export class GmailClient {
       const response = await gmail.users.messages.list({
         userId: 'me',
         maxResults,
-        q: 'to:haloweaveinsights@gmail.com',
+        q: 'to:3advanceinsights@gmail.com',
       });
 
       if (!response.data.messages) {

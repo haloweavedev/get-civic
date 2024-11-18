@@ -23,7 +23,7 @@ async function restoreData() {
           update: {},
           create: {
             id: userId,
-            email: 'haloweaveinsights@gmail.com', // Default email
+            email: '3advanceinsights@gmail.com', // Default email
             role: 'ADMIN',
             settings: {}
           }

@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     
     const user = await prisma.user.findFirstOrThrow({
       where: { 
-        email: 'haloweaveinsights@gmail.com'
+        email: '3advanceinsights@gmail.com'
       }
     });
 

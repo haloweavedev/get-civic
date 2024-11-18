@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     // Find or create user
     const user = await prisma.user.findFirst({
       where: { 
-        email: 'haloweaveinsights@gmail.com',
+        email: '3advanceinsights@gmail.com',
         role: 'ADMIN'
       }
     });

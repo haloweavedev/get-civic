@@ -7,7 +7,7 @@ async function resetDatabase() {
     
     console.log('🔄 Resetting user tokens...');
     await prisma.user.updateMany({
-      where: { email: 'haloweaveinsights@gmail.com' },
+      where: { email: '3advanceinsights@gmail.com' },
       data: {
         settings: {}
       }

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Get admin user
     const user = await prisma.user.findFirst({
       where: { 
-        email: 'haloweaveinsights@gmail.com',
+        email: '3advanceinsights@gmail.com',
         role: 'ADMIN'
       }
     });

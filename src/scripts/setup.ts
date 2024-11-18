@@ -6,13 +6,13 @@ async function setup() {
     // Create default admin user
     const user = await prisma.user.upsert({
       where: {
-        email: 'haloweaveinsights@gmail.com'
+        email: '3advanceinsights@gmail.com'
       },
       update: {
         role: 'ADMIN'
       },
       create: {
-        email: 'haloweaveinsights@gmail.com',
+        email: '3advanceinsights@gmail.com',
         role: 'ADMIN',
         name: 'Get Civic Admin',
         settings: {}

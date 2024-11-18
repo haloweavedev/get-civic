@@ -211,7 +211,7 @@ export default function GmailIntegrationClient({
                   )}
                   <div>
                     <div className="text-sm font-medium text-muted-foreground">Email Account</div>
-                    <div className="text-sm font-medium">haloweaveinsights@gmail.com</div>
+                    <div className="text-sm font-medium">3advanceinsights@gmail.com</div>
                   </div>
                 </div>
 
@@ -291,7 +291,7 @@ export default function GmailIntegrationClient({
                   <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
                     Connect your Gmail account to start analyzing your email communications. We'll only read emails
-                    sent to haloweaveinsights@gmail.com.
+                    sent to 3advanceinsights@gmail.com.
                   </p>
                 </div>
                 <Button size="lg" onClick={handleConnect} disabled={isConnecting}>
