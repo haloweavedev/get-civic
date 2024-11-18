@@ -3,30 +3,34 @@ import { prisma } from '@/lib/prisma';
 import { InsightsAnalysisService } from '@/lib/services/insights-analysis';
 import type { CategoryData } from '@/types/dashboard';
 
+const ADMIN_EMAIL = '3advanceinsights@gmail.com';
+
 async function generateStrategicAnalysis() {
   try {
-    const userId = 'user_2oJI9IaKIpeRiMh8bSdFMhYWuKg'; // Replace with the appropriate user ID
+    // Get admin user dynamically
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: ADMIN_EMAIL,
+        role: 'ADMIN'
+      }
+    });
 
-    // Get data for new analysis
+    if (!user) {
+      throw new Error(`Admin user with email ${ADMIN_EMAIL} not found`);
+    }
+
+    // Fetch data for new analysis
     const [rawCategories, communications] = await Promise.all([
       prisma.analysis.groupBy({
         by: ['categories'],
-        _count: {
-          categories: true,
-        },
-        where: {
-          communication: {
-            userId,
-          },
-        },
+        _count: { categories: true },
+        where: { communication: { userId: user.id } },
       }),
       prisma.communication.findMany({
         where: {
-          userId,
+          userId: user.id,
           status: 'PROCESSED',
-          analysis: {
-            priority: { gte: 4 },
-          },
+          analysis: { priority: { gte: 4 } },
         },
         include: { analysis: true },
         orderBy: { createdAt: 'desc' },
@@ -38,13 +42,13 @@ async function generateStrategicAnalysis() {
     const categories: CategoryData[] = rawCategories.map((category) => ({
       name: category.categories as unknown as string,
       count: category._count.categories,
-      percentage: 0, // You'll need to calculate this separately
-      communications: [], // Add the relevant communications here
+      percentage: 0, // Calculate this separately if needed
+      communications: [], // Add the relevant communications here if needed
     }));
 
     // Generate and save strategic analysis
     const analysis = await InsightsAnalysisService.generateAndSaveAnalysis(
-      userId,
+      user.id,
       categories,
       communications
     );

@@ -1,4 +1,5 @@
 // src/app/api/webhooks/twilio/sms/route.ts
+
 import twilio from 'twilio';
 import { prisma } from '@/lib/prisma';
 import { AIAnalysisService } from '@/lib/services/ai-analysis';
@@ -9,18 +10,31 @@ import { TWILIO_RESPONSE_PROMPT } from '@/lib/services/twilio/prompts';
 const MessagingResponse = twilio.twiml.MessagingResponse;
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
+const ADMIN_EMAIL = '3advanceinsights@gmail.com';
+let cachedAdminUser: { id: string } | null = null;
+
+async function getAdminUser() {
+  if (cachedAdminUser) return cachedAdminUser;
+
+  const user = await prisma.user.findFirst({
+    where: { 
+      email: ADMIN_EMAIL,
+      role: 'ADMIN'
+    },
+    select: { id: true }
+  });
+
+  if (!user) {
+    throw new Error(`Admin user with email ${ADMIN_EMAIL} not found`);
+  }
+
+  cachedAdminUser = user;
+  return user;
+}
+
 export const POST = async (req: Request) => {
   try {
-    const user = await prisma.user.findFirst({
-      where: { 
-        email: '3advanceinsights@gmail.com',
-        role: 'ADMIN'
-      }
-    });
-    
-    if (!user) {
-      throw new Error('Admin user not found');
-    }
+    const user = await getAdminUser();
 
     const body = await req.formData();
     const payload = Object.fromEntries(body.entries());
@@ -61,7 +75,7 @@ export const POST = async (req: Request) => {
     console.error('Twilio webhook error:', error);
     const twiml = new MessagingResponse();
     twiml.message('We encountered an issue. Please try again later.');
-    
+
     return new NextResponse(twiml.toString(), {
       headers: {
         'Content-Type': 'text/xml'
@@ -77,6 +91,8 @@ async function processAIResponseAndSend(
   communicationId: string
 ) {
   try {
+    const user = await getAdminUser();
+
     // Run analysis first
     await AIAnalysisService.analyzeCommunication(communicationId);
 
@@ -125,10 +141,9 @@ async function processAIResponseAndSend(
           originalMessageId: communicationId
         },
         status: 'PROCESSED',
-        userId: 'user_2oJI9IaKIpeRiMh8bSdFMhYWuKg' // Use your admin user ID
+        userId: user.id
       }
     });
-
   } catch (error) {
     console.error('Failed to process AI response:', error);
   }
