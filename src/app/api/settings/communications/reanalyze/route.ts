@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { AIAnalysisService } from '@/lib/services/ai-analysis';
+import { logger } from '@/lib/integrations/utils';
 import { z } from 'zod';
 
 const reanalyzeSchema = z.object({
@@ -20,44 +21,49 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { ids } = reanalyzeSchema.parse(body);
 
-    // Verify ownership and get communications
+    logger.info('Starting reanalysis', { userId, communicationIds: ids });
+
     const communications = await prisma.communication.findMany({
       where: {
         id: { in: ids },
         userId,
-        source: 'HUMAN', // Only reanalyze human communications
-        excludeFromAnalysis: false, // Don't reanalyze excluded communications
+        source: 'HUMAN',
+        excludeFromAnalysis: false,
       },
       select: { id: true },
     });
 
     if (communications.length === 0) {
+      logger.warn('No valid communications found', { ids });
       return NextResponse.json(
         { error: 'No valid communications found for reanalysis' },
         { status: 400 }
       );
     }
 
+    const commIds = communications.map(c => c.id);
+    
     // Delete existing analyses
     await prisma.analysis.deleteMany({
-      where: {
-        communicationId: { in: communications.map(c => c.id) },
-      },
+      where: { communicationId: { in: commIds } },
     });
 
-    // Update communications status to trigger reanalysis
+    // Reset status
     await prisma.communication.updateMany({
-      where: {
-        id: { in: communications.map(c => c.id) },
-      },
-      data: {
-        status: 'PENDING',
-      },
+      where: { id: { in: commIds } },
+      data: { status: 'PENDING' },
     });
 
-    // Trigger reanalysis
+    // Trigger reanalysis one at a time to avoid rate limits
     for (const comm of communications) {
-      await AIAnalysisService.analyzeCommunication(comm.id);
+      try {
+        await AIAnalysisService.analyzeCommunication(comm.id, true);
+      } catch (error) {
+        logger.error('Failed to analyze communication', {
+          communicationId: comm.id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }
 
     return NextResponse.json({
@@ -65,7 +71,7 @@ export async function POST(req: Request) {
       reanalyzed: communications.length,
     });
   } catch (error) {
-    console.error('Failed to reanalyze communications:', error);
+    logger.error('Reanalysis failed:', error);
     return NextResponse.json(
       { error: 'Failed to reanalyze communications' },
       { status: 500 }

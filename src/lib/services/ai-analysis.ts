@@ -2,6 +2,7 @@
 
 import { openai } from '@/lib/openai';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/integrations/utils';
 
 const CATEGORY_GUIDELINES = `
 When categorizing, use these standard high-level categories and their relevant subcategories:
