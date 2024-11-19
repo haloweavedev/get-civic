@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { UserButton } from "@clerk/nextjs";
 import { 
@@ -14,6 +14,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image"; 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -124,8 +125,15 @@ export default function DashboardLayout({
                 </SheetTrigger>
                 <SheetContent side="left" className="w-72 p-0">
                   <div className="flex h-16 shrink-0 items-center px-6">
-                    <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-                      Get Civic
+                    <Link href="/" className="flex items-center">
+                      <Image
+                        src="/images/CIVIC+light.png"
+                        alt="Get Civic Logo"
+                        width={120}
+                        height={40}
+                        priority
+                        className="object-contain"
+                      />
                     </Link>
                   </div>
                   <nav className="flex flex-col gap-1 px-3 py-4">
@@ -135,8 +143,15 @@ export default function DashboardLayout({
                   </nav>
                 </SheetContent>
               </Sheet>
-              <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-                Get Civic
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/images/CIVIC+light.png"
+                  alt="Get Civic Logo"
+                  width={120}
+                  height={40}
+                  priority
+                  className="object-contain"
+                />
               </Link>
             </div>
             <div className="flex items-center gap-4">
