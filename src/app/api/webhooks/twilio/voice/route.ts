@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     twiml.say({
       voice: 'Polly.Amy-Neural',
       language: 'en-US'
-    }, 'Thank you for calling Civic. Please state your location and clearly describe your concern after the tone.');
+    }, 'Hello there, you have reached Reprentative Smiths office. Please state your name and location, and let us know whats on your mind. We truly value your opinion and will respond as soon as possible.');
     
     // Set up recording
     twiml.record({
